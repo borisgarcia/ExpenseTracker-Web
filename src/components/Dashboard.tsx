@@ -11,6 +11,7 @@ interface Expense {
     name: string;
   };
   date: string;
+  paymentMethod?: string;
 }
 
 interface Category {
@@ -19,7 +20,7 @@ interface Category {
 }
 
 interface DashboardProps {
-  user: { name: string; email: string; picture?: string };
+  user: { name: string; email: string; picture?: string; monthlyBudget?: number };
   onLogout: () => void;
 }
 
@@ -31,9 +32,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
 
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAddingCategory, setIsAddingCategory] = useState(false);
+
+  const [monthlyLimit, setMonthlyLimit] = useState(user.monthlyBudget || 1500);
+  const [editLimit, setEditLimit] = useState(String(user.monthlyBudget || 1500));
+  const [isSavingPrefs, setIsSavingPrefs] = useState(false);
+
+  useEffect(() => {
+    if (user.monthlyBudget !== undefined) {
+      setMonthlyLimit(user.monthlyBudget);
+      setEditLimit(String(user.monthlyBudget));
+    }
+  }, [user.monthlyBudget]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -65,15 +78,45 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         amount: parseFloat(amount),
         description,
         categoryId,
+        paymentMethod,
         date: new Date().toISOString(),
       });
 
       setExpenses([newExpense, ...expenses]);
       setDescription('');
       setAmount('');
+      setPaymentMethod('Cash');
     } catch (error) {
       console.error('Failed to add expense:', error);
       alert('Error registering expense. Please try again.');
+    }
+  };
+
+  const handleUpdatePreferences = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const limitNum = parseFloat(editLimit);
+    if (isNaN(limitNum) || limitNum < 0) {
+      alert('Please enter a valid positive number for the budget limit.');
+      return;
+    }
+
+    setIsSavingPrefs(true);
+    try {
+      const updatedUser = await api.patch('/users/me', {
+        monthlyBudget: limitNum,
+      });
+
+      setMonthlyLimit(updatedUser.monthlyBudget);
+      setEditLimit(String(updatedUser.monthlyBudget));
+      
+      const storedUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : {};
+      localStorage.setItem('user', JSON.stringify({ ...storedUser, monthlyBudget: updatedUser.monthlyBudget }));
+      alert('Preferences saved successfully!');
+    } catch (error) {
+      console.error('Failed to update preferences:', error);
+      alert('Error saving preferences. Please try again.');
+    } finally {
+      setIsSavingPrefs(false);
     }
   };
 
@@ -110,7 +153,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   };
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const monthlyLimit = 1500;
   const balance = monthlyLimit - totalExpenses;
 
   const formatDate = (dateString: string) => {
@@ -220,6 +262,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                       )}
                     </select>
                   </div>
+                  <div className="form-group">
+                    <label htmlFor="expense-payment">Payment Method</label>
+                    <select
+                      id="expense-payment"
+                      className="form-input"
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      required
+                    >
+                      <option value="Cash">Cash</option>
+                      <option value="Credit Card">Credit Card</option>
+                      <option value="Debit Card">Debit Card</option>
+                      <option value="Bank Transfer">Bank Transfer</option>
+                    </select>
+                  </div>
                   <button type="submit" className="submit-btn">Add Expense</button>
                 </form>
               </section>
@@ -245,6 +302,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                   </button>
                 </form>
               </section>
+
+              <section className="card-panel">
+                <h3 className="panel-title">Preferences</h3>
+                <form className="expense-form" onSubmit={handleUpdatePreferences}>
+                  <div className="form-group">
+                    <label htmlFor="monthly-budget">Monthly Budget Limit ($)</label>
+                    <input
+                      id="monthly-budget"
+                      type="number"
+                      step="0.01"
+                      className="form-input"
+                      placeholder="e.g., 1500.00"
+                      value={editLimit}
+                      onChange={(e) => setEditLimit(e.target.value)}
+                      required
+                      disabled={isSavingPrefs}
+                    />
+                  </div>
+                  <button type="submit" className="submit-btn" disabled={isSavingPrefs}>
+                    {isSavingPrefs ? 'Saving...' : 'Save Preferences'}
+                  </button>
+                </form>
+              </section>
             </div>
 
             <section className="card-panel">
@@ -259,6 +339,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                         <span className="item-description">{expense.description}</span>
                         <div className="item-meta">
                           <span className="item-category">{expense.category?.name || 'Other'}</span>
+                          <span className="item-payment-method">{expense.paymentMethod || 'Cash'}</span>
                           <span>•</span>
                           <span>{formatDate(expense.date)}</span>
                         </div>

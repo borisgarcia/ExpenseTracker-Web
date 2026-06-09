@@ -278,6 +278,14 @@
   font-weight: 600;
 }
 
+.item-payment-method {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
 .item-amount {
   font-size: 16px;
   font-weight: 700;
