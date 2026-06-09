@@ -56,7 +56,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         
         <h1 className="brand-name">ExpenseTracker</h1>
         <p className="brand-tagline">
-          Toma el control de tus finanzas personales de forma simple y elegante.
+          Take control of your personal finances simply and elegantly.
         </p>
 
         {hasClientId ? (
@@ -72,13 +72,13 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         ) : (
           <div style={{ width: '100%' }}>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-              ⚠️ Google Client ID no configurado en <code>.env</code>
+              ⚠️ Google Client ID not configured in <code>.env</code>
             </p>
           </div>
         )}
 
         <div className="login-divider">
-          <span>O prueba la aplicación</span>
+          <span>Or try the application</span>
         </div>
 
         <button className="mock-login-btn" onClick={handleMockLogin}>
@@ -87,11 +87,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>
-          Iniciar como Invitado
+          Sign in as Guest
         </button>
 
         <p className="card-footer">
-          Al continuar, aceptas nuestros <a href="#">Términos de Servicio</a> y <a href="#">Política de Privacidad</a>.
+          By continuing, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
         </p>
       </div>
     </div>

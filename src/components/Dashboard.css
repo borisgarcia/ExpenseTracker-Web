@@ -147,6 +147,12 @@
   gap: 32px;
 }
 
+.main-grid-column {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
 @media (max-width: 900px) {
   .main-grid {
     grid-template-columns: 1fr;

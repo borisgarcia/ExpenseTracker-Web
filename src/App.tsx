@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
+import { api } from './utils/api';
 
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
@@ -24,6 +25,23 @@ function App() {
     setToken(null);
     setUser(null);
   };
+
+  useEffect(() => {
+    const checkSession = async () => {
+      if (!token) return;
+      try {
+        const profile = await api.get('/users/me');
+        const storedUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : {};
+        const updatedUser = { ...storedUser, ...profile };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+      } catch (error) {
+        console.error('Session check failed:', error);
+        handleLogout();
+      }
+    };
+    checkSession();
+  }, [token]);
 
   return (
     <>
