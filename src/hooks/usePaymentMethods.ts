@@ -51,6 +51,21 @@ export const usePaymentMethods = () => {
     return updated;
   };
 
+  const payCard = async (id: string, fromBankAccountId?: string): Promise<PaymentMethod> => {
+    const updated = await api.post(`/payment-methods/${id}/pay`, { fromBankAccountId });
+    setPaymentMethods((prev) =>
+      prev.map((m) => {
+        if (m.id === id) return updated;
+        return m;
+      })
+    );
+    // Refetch in background to update the bank account balance as well
+    if (fromBankAccountId) {
+      fetchMethods();
+    }
+    return updated;
+  };
+
   const defaultMethod = paymentMethods.find((m) => m.isDefault) ?? paymentMethods[0];
 
   return {
@@ -61,6 +76,7 @@ export const usePaymentMethods = () => {
     updateMethod,
     deleteMethod,
     setDefaultMethod,
+    payCard,
     refetch: fetchMethods,
   };
 };

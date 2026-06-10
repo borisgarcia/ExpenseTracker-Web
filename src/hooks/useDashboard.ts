@@ -207,6 +207,7 @@ export const useDashboard = ({ user }: UseDashboardOptions) => {
       setExpenseCurrency(currency);
       setRecentPage(1);
       setAllPage(1);
+      pm.refetch(); // sync balances
     } catch (error) {
       console.error('Failed to add expense:', error);
       alert('Error registering expense. Please try again.');
@@ -217,6 +218,7 @@ export const useDashboard = ({ user }: UseDashboardOptions) => {
     try {
       await api.delete(`/expenses/${id}`);
       setExpenses(expenses.filter((exp) => exp.id !== id));
+      pm.refetch(); // sync balances
     } catch (error) {
       console.error('Failed to delete expense:', error);
       alert('Could not delete expense.');
@@ -302,6 +304,7 @@ export const useDashboard = ({ user }: UseDashboardOptions) => {
     updatePaymentMethod: pm.updateMethod,
     deletePaymentMethod: pm.deleteMethod,
     setDefaultPaymentMethod: pm.setDefaultMethod,
+    payCardPaymentMethod: pm.payCard,
     // Currency / budget
     currency, monthlyLimit, totalExpenses, balance, convertAmount,
     // Add expense form

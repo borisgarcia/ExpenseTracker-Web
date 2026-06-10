@@ -42,9 +42,10 @@ interface WalletCardProps {
   onEdit: (method: PaymentMethod) => void;
   onDelete: (id: string) => void;
   onSetDefault: (id: string) => void;
+  onPayTrigger: (method: PaymentMethod) => void;
 }
 
-const WalletCard: React.FC<WalletCardProps> = ({ method, onEdit, onDelete, onSetDefault }) => {
+const WalletCard: React.FC<WalletCardProps> = ({ method, onEdit, onDelete, onSetDefault, onPayTrigger }) => {
   const gradient = method.color
     ? `linear-gradient(135deg, ${method.color}cc 0%, ${method.color} 100%)`
     : TYPE_GRADIENT[method.type];
@@ -74,7 +75,7 @@ const WalletCard: React.FC<WalletCardProps> = ({ method, onEdit, onDelete, onSet
           )}
           <button
             className="wallet-action-btn"
-            title="Editar método de pago"
+            title="Edit Account"
             onClick={() => onEdit(method)}
           >
             <EditIcon />
@@ -82,7 +83,7 @@ const WalletCard: React.FC<WalletCardProps> = ({ method, onEdit, onDelete, onSet
           {!isCash && (
             <button
               className="wallet-action-btn wallet-action-delete"
-              title="Archive method"
+              title="Archive Account"
               onClick={() => onDelete(method.id)}
             >
               <TrashIcon />
@@ -91,39 +92,75 @@ const WalletCard: React.FC<WalletCardProps> = ({ method, onEdit, onDelete, onSet
         </div>
       </div>
 
-      {/* Card number row */}
-      {method.lastFour && (
-        <div className="wallet-card-number">
-          <span>····</span><span>····</span><span>····</span>
-          <span className="wallet-last-four">{method.lastFour}</span>
-        </div>
-      )}
-      {method.type === 'BANK_ACCOUNT' && !method.lastFour && (
-        <div className="wallet-card-number" style={{ letterSpacing: 2 }}>
-          ···· ···· ····
-        </div>
-      )}
-      {isCash && (
-        <div className="wallet-cash-icon">💵</div>
-      )}
+      {/* Middle row (Hero balance to avoid wasted space) */}
+      <div className="wallet-card-middle">
+        {method.type === 'CASH' && (
+          <div className="wallet-balance-group">
+            <span className="wallet-balance-label">Available Cash</span>
+            <span className="wallet-balance-value">{formatAmount(method.balance, method.currency)}</span>
+          </div>
+        )}
+
+        {method.type === 'BANK_ACCOUNT' && (
+          <div className="wallet-balance-group">
+            <span className="wallet-balance-label">Available Balance</span>
+            <span className="wallet-balance-value">{formatAmount(method.balance, method.currency)}</span>
+          </div>
+        )}
+
+        {method.type === 'CREDIT_CARD' && (
+          <div className="wallet-balance-group">
+            <span className="wallet-balance-label">Current Debt</span>
+            <div className="wallet-credit-balance-row">
+              <span className="wallet-balance-value debt-color">{formatAmount(method.balance, method.currency)}</span>
+              {method.balance > 0 && (
+                <button
+                  className="wallet-pay-btn"
+                  onClick={(e) => { e.stopPropagation(); onPayTrigger(method); }}
+                >
+                  PAY
+                </button>
+              )}
+            </div>
+            <span className="wallet-limit-label">Limit: {formatAmount(method.creditLimit || 0, method.currency)}</span>
+          </div>
+        )}
+
+        {method.type === 'DEBIT_CARD' && (
+          <div className="wallet-balance-group">
+            <span className="wallet-balance-label">Available (Linked)</span>
+            <span className="wallet-balance-value">
+              {method.linkedAccount
+                ? formatAmount(method.linkedAccount.balance, method.linkedAccount.currency)
+                : '—'}
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* Bottom row */}
       <div className="wallet-card-bottom">
-        <div>
-          <div className="wallet-card-label">{method.label}</div>
+        <div className="wallet-info-group">
+          <div className="wallet-card-label" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {method.label}
+          </div>
           {method.bank && <div className="wallet-card-bank">{method.bank}</div>}
-          {method.creditLimit != null && (
-            <div className="wallet-card-bank">
-              Límite: {formatAmount(method.creditLimit, 'USD')}
-              {method.cutoffDay ? ` · Corte día ${method.cutoffDay}` : ''}
+          {method.type === 'DEBIT_CARD' && method.linkedAccount && (
+            <div className="wallet-card-linked-info">Linked: {method.linkedAccount.label}</div>
+          )}
+        </div>
+        <div className="wallet-badge-group">
+          {method.lastFour && (
+            <div className="wallet-card-number-compact">
+              •••• {method.lastFour}
+            </div>
+          )}
+          {networkStyle && (
+            <div className="wallet-network-badge" style={{ background: networkStyle.color, flexShrink: 0 }}>
+              {networkStyle.icon}
             </div>
           )}
         </div>
-        {networkStyle && (
-          <div className="wallet-network-badge" style={{ background: networkStyle.color }}>
-            {networkStyle.icon}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -135,6 +172,7 @@ interface PaymentMethodFormProps {
   onSubmit: (payload: any) => Promise<void>;
   initialData?: PaymentMethod | null;
   onCancel: () => void;
+  bankAccounts: PaymentMethod[];
 }
 
 const FORM_DEFAULTS = {
@@ -147,13 +185,16 @@ const FORM_DEFAULTS = {
   cutoffDay: '',
   color: '#6610f2',
   isDefault: false,
+  balance: '',
+  currency: 'USD',
+  linkedAccountId: '',
 };
 
-const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initialData, onCancel }) => {
+const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initialData, onCancel, bankAccounts }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState(FORM_DEFAULTS);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialData) {
       setForm({
         type: initialData.type,
@@ -165,6 +206,9 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initial
         cutoffDay: initialData.cutoffDay != null ? String(initialData.cutoffDay) : '',
         color: initialData.color || '#6610f2',
         isDefault: initialData.isDefault,
+        balance: initialData.balance != null ? String(initialData.balance) : '0',
+        currency: initialData.currency || 'USD',
+        linkedAccountId: initialData.linkedAccountId || '',
       });
     } else {
       setForm(FORM_DEFAULTS);
@@ -181,7 +225,12 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initial
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (needsCard && form.lastFour && !/^\d{4}$/.test(form.lastFour)) {
-      alert('Los últimos 4 dígitos deben ser exactamente 4 números.');
+      alert('The last 4 digits must be exactly 4 numbers.');
+      return;
+    }
+
+    if (form.type === 'DEBIT_CARD' && !form.linkedAccountId) {
+      alert('Please select a bank account to link with the debit card.');
       return;
     }
 
@@ -192,10 +241,14 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initial
         bank: form.bank.trim() || undefined,
         color: form.color,
         isDefault: form.isDefault,
+        currency: form.currency,
       };
 
       if (!initialData) {
         payload.type = form.type;
+        payload.balance = form.balance ? parseFloat(form.balance) : 0;
+      } else {
+        payload.balance = form.balance ? parseFloat(form.balance) : 0;
       }
 
       if (needsCard) {
@@ -204,6 +257,12 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initial
       } else {
         payload.network = undefined;
         payload.lastFour = undefined;
+      }
+
+      if (form.type === 'DEBIT_CARD') {
+        payload.linkedAccountId = form.linkedAccountId || undefined;
+      } else {
+        payload.linkedAccountId = undefined;
       }
 
       if (needsCredit) {
@@ -216,17 +275,17 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initial
 
       await onSubmit(payload);
     } catch (err: any) {
-      alert(err.message || 'Error al guardar el método de pago.');
+      alert(err.message || 'Error saving payment method.');
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form className="expense-form" onSubmit={handleSubmit}>
       {/* Type */}
       <div className="form-group">
-        <label htmlFor="pm-type">Tipo</label>
+        <label htmlFor="pm-type">Type</label>
         <select
           id="pm-type"
           className="form-input"
@@ -242,11 +301,11 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initial
 
       {/* Label */}
       <div className="form-group">
-        <label htmlFor="pm-label">Nombre / Etiqueta Personalizada (opcional)</label>
+        <label htmlFor="pm-label">Name / Custom Label (optional)</label>
         <input
           id="pm-label"
           className="form-input"
-          placeholder="e.g. Tarjeta Principal, BAC Negocios (vacío para auto-generar)"
+          placeholder="e.g. Main Card, Business Account (leave empty to auto-generate)"
           value={form.label}
           onChange={(e) => set('label', e.target.value)}
         />
@@ -255,13 +314,71 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initial
       {/* Bank (only if not CASH) */}
       {!isCash && (
         <div className="form-group">
-          <label htmlFor="pm-bank">Banco</label>
+          <label htmlFor="pm-bank">Bank</label>
           <input
             id="pm-bank"
             className="form-input"
-            placeholder="e.g. BBVA, BAC, Banpais"
+            placeholder="e.g. Chase, Bank of America"
             value={form.bank}
             onChange={(e) => set('bank', e.target.value)}
+          />
+        </div>
+      )}
+
+      {/* Linked account for debit cards */}
+      {form.type === 'DEBIT_CARD' && (
+        <div className="form-group">
+          <label htmlFor="pm-linked-account">Link to Bank Account</label>
+          <select
+            id="pm-linked-account"
+            className="form-input"
+            value={form.linkedAccountId}
+            onChange={(e) => set('linkedAccountId', e.target.value)}
+            required
+          >
+            <option value="">-- Select Account --</option>
+            {bankAccounts.map((acc) => (
+              <option key={acc.id} value={acc.id}>
+                {acc.label} ({acc.bank || 'Bank'}) - Balance: {formatAmount(acc.balance, acc.currency)}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Currency (only if not CASH or DEBIT_CARD) */}
+      {(form.type === 'BANK_ACCOUNT' || form.type === 'CREDIT_CARD') && (
+        <div className="form-group">
+          <label htmlFor="pm-currency">Currency</label>
+          <select
+            id="pm-currency"
+            className="form-input"
+            value={form.currency}
+            onChange={(e) => set('currency', e.target.value)}
+          >
+            <option value="USD">USD - US Dollar</option>
+            <option value="HNL">HNL - Honduran Lempira</option>
+            <option value="EUR">EUR - Euro</option>
+            <option value="MXN">MXN - Mexican Peso</option>
+            <option value="JPY">JPY - Japanese Yen</option>
+          </select>
+        </div>
+      )}
+
+      {/* Starting balance / debt (only if not CASH or DEBIT_CARD) */}
+      {(form.type === 'BANK_ACCOUNT' || form.type === 'CREDIT_CARD') && (
+        <div className="form-group">
+          <label htmlFor="pm-balance">
+            {form.type === 'CREDIT_CARD' ? 'Initial used balance (Debt)' : 'Initial / available balance'}
+          </label>
+          <input
+            id="pm-balance"
+            type="number"
+            step="0.01"
+            className="form-input"
+            placeholder="0.00"
+            value={form.balance}
+            onChange={(e) => set('balance', e.target.value)}
           />
         </div>
       )}
@@ -270,7 +387,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initial
       {needsCard && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div className="form-group">
-            <label htmlFor="pm-network">Red</label>
+            <label htmlFor="pm-network">Network</label>
             <select
               id="pm-network"
               className="form-input"
@@ -283,7 +400,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initial
             </select>
           </div>
           <div className="form-group">
-            <label htmlFor="pm-last4">Últimos 4 dígitos</label>
+            <label htmlFor="pm-last4">Last 4 digits</label>
             <input
               id="pm-last4"
               className="form-input"
@@ -300,7 +417,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initial
       {needsCredit && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div className="form-group">
-            <label htmlFor="pm-limit">Límite de crédito</label>
+            <label htmlFor="pm-limit">Credit limit</label>
             <input
               id="pm-limit"
               type="number"
@@ -312,7 +429,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initial
             />
           </div>
           <div className="form-group">
-            <label htmlFor="pm-cutoff">Día de corte</label>
+            <label htmlFor="pm-cutoff">Cutoff day</label>
             <input
               id="pm-cutoff"
               type="number"
@@ -330,7 +447,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initial
       {/* Color + preview */}
       <div className="pm-color-row">
         <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-          <label htmlFor="pm-color">Color de tarjeta</label>
+          <label htmlFor="pm-color">Card color</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <input
               id="pm-color"
@@ -353,14 +470,14 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initial
               checked={form.isDefault}
               onChange={(e) => set('isDefault', e.target.checked)}
             />
-            <span>Predeterminado</span>
+            <span>Default</span>
           </label>
         )}
       </div>
 
       <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
         <button type="submit" className="submit-btn" disabled={isSaving} style={{ flex: 1 }}>
-          {isSaving ? 'Guardando...' : initialData ? 'Guardar Cambios' : 'Agregar'}
+          {isSaving ? 'Saving...' : initialData ? 'Save Changes' : 'Add'}
         </button>
         <button
           type="button"
@@ -368,7 +485,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initial
           className="submit-btn"
           style={{ flex: '0 0 auto', background: 'rgba(255,255,255,0.08)' }}
         >
-          Cancelar
+          Cancel
         </button>
       </div>
     </form>
@@ -377,25 +494,34 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSubmit, initial
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-interface PaymentMethodsManagerProps {
+interface AccountsProps {
   paymentMethods: PaymentMethod[];
   onCreate: (payload: CreatePaymentMethodPayload) => Promise<PaymentMethod>;
   onUpdate: (id: string, payload: UpdatePaymentMethodPayload) => Promise<PaymentMethod>;
   onDelete: (id: string) => Promise<void>;
   onSetDefault: (id: string) => Promise<void>;
+  onPayCard: (id: string, fromBankAccountId?: string) => Promise<PaymentMethod>;
 }
 
-export const PaymentMethodsManager: React.FC<PaymentMethodsManagerProps> = ({
+export const Accounts: React.FC<AccountsProps> = ({
   paymentMethods,
   onCreate,
   onUpdate,
   onDelete,
   onSetDefault,
+  onPayCard,
 }) => {
   const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 3;
+
+  // Pay modal state
+  const [payingCard, setPayingCard] = useState<PaymentMethod | null>(null);
+  const [paymentSourceId, setPaymentSourceId] = useState<string>('');
+  const [isSubmittingPay, setIsSubmittingPay] = useState(false);
+
+  const bankAccounts = paymentMethods.filter((m) => m.type === 'BANK_ACCOUNT');
 
   const totalPages = Math.ceil(paymentMethods.length / pageSize) || 1;
   const safePage = Math.min(currentPage, totalPages);
@@ -413,14 +539,14 @@ export const PaymentMethodsManager: React.FC<PaymentMethodsManagerProps> = ({
   );
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('¿Archivar este método de pago? Los gastos existentes seguirán mostrándolo.')) return;
+    if (!window.confirm('Archive this account? Existing expenses will still show it.')) return;
     try {
       await onDelete(id);
       if (editingMethod?.id === id) {
         setEditingMethod(null);
       }
     } catch (err: any) {
-      alert(err.message || 'No se pudo archivar el método de pago.');
+      alert(err.message || 'Could not archive account.');
     }
   };
 
@@ -428,13 +554,30 @@ export const PaymentMethodsManager: React.FC<PaymentMethodsManagerProps> = ({
     try {
       await onSetDefault(id);
     } catch (err: any) {
-      alert(err.message || 'Error al establecer como predeterminado.');
+      alert(err.message || 'Error setting as default.');
+    }
+  };
+
+  const handlePayCardSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payingCard) return;
+
+    setIsSubmittingPay(true);
+    try {
+      await onPayCard(payingCard.id, paymentSourceId || undefined);
+      setPayingCard(null);
+      setPaymentSourceId('');
+      alert('Payment registered successfully and card debt reset.');
+    } catch (err: any) {
+      alert(err.message || 'Error processing card payment.');
+    } finally {
+      setIsSubmittingPay(false);
     }
   };
 
   return (
-    <section className="card-panel">
-      <h3 className="panel-title">Métodos de Pago</h3>
+    <section className="card-panel" style={{ position: 'relative' }}>
+      <h3 className="panel-title">Accounts</h3>
 
       <div className="wallet-grid">
         {paginatedMethods.map((m) => (
@@ -448,6 +591,9 @@ export const PaymentMethodsManager: React.FC<PaymentMethodsManagerProps> = ({
             }}
             onDelete={handleDelete}
             onSetDefault={handleSetDefault}
+            onPayTrigger={(method) => {
+              setPayingCard(method);
+            }}
           />
         ))}
       </div>
@@ -478,9 +624,10 @@ export const PaymentMethodsManager: React.FC<PaymentMethodsManagerProps> = ({
 
       {editingMethod ? (
         <div className="add-pm-form-container">
-          <h4 className="add-pm-form-title">Editar método de pago: {editingMethod.label}</h4>
+          <h4 className="add-pm-form-title">Edit Account: {editingMethod.label}</h4>
           <PaymentMethodForm
             initialData={editingMethod}
+            bankAccounts={bankAccounts}
             onSubmit={async (payload) => {
               await onUpdate(editingMethod.id, payload);
               setEditingMethod(null);
@@ -490,8 +637,9 @@ export const PaymentMethodsManager: React.FC<PaymentMethodsManagerProps> = ({
         </div>
       ) : isAdding ? (
         <div className="add-pm-form-container">
-          <h4 className="add-pm-form-title">Nuevo método de pago</h4>
+          <h4 className="add-pm-form-title">New Account</h4>
           <PaymentMethodForm
+            bankAccounts={bankAccounts}
             onSubmit={async (payload) => {
               await onCreate(payload as any);
               setIsAdding(false);
@@ -505,8 +653,66 @@ export const PaymentMethodsManager: React.FC<PaymentMethodsManagerProps> = ({
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
-          Agregar método de pago
+          Add Account
         </button>
+      )}
+
+      {/* Credit Card Pay Modal Overlay */}
+      {payingCard && (
+        <div className="modal-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div className="add-pm-form-container" style={{ width: '90%', maxWidth: '400px', marginTop: 0, boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+            <h4 className="add-pm-form-title" style={{ marginBottom: '16px' }}>
+              Pay Card: {payingCard.label}
+            </h4>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+              Current accumulated debt: <strong style={{ color: '#fca5a5' }}>{formatAmount(payingCard.balance, payingCard.currency)}</strong>
+            </p>
+            <form className="expense-form" onSubmit={handlePayCardSubmit}>
+              <div className="form-group">
+                <label htmlFor="pay-source">Pay from Bank Account (optional)</label>
+                <select
+                  id="pay-source"
+                  className="form-input"
+                  value={paymentSourceId}
+                  onChange={(e) => setPaymentSourceId(e.target.value)}
+                >
+                  <option value="">-- Just reset debt to 0 --</option>
+                  {bankAccounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.label} - Available: {formatAmount(acc.balance, acc.currency)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+                <button type="submit" className="submit-btn" disabled={isSubmittingPay} style={{ flex: 1 }}>
+                  {isSubmittingPay ? 'Processing...' : 'Register Payment'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setPayingCard(null); setPaymentSourceId(''); }}
+                  className="submit-btn"
+                  style={{ flex: '0 0 auto', background: 'rgba(255,255,255,0.08)' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </section>
   );

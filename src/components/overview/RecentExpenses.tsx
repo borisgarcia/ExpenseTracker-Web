@@ -36,46 +36,48 @@ export const RecentExpenses: React.FC<RecentExpensesProps> = ({
         </p>
       ) : (
         <>
-          {expenses.map((expense) => {
-            const expCurrency = expense.currency ?? 'USD';
-            return (
-              <div key={expense.id} className="expense-item">
-                <div className="item-left">
-                  <span className="item-description">{expense.description}</span>
-                  <div className="item-meta">
-                    <span className="item-category">{expense.category?.name ?? 'Other'}</span>
-                    <span className="item-payment-method">{expense.paymentMethod ?? 'Cash'}</span>
-                    <span>•</span>
-                    <span>{formatDate(expense.date)}</span>
+          <div className="expenses-items-wrapper" style={{ minHeight: '408px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {expenses.map((expense) => {
+              const expCurrency = expense.currency ?? 'USD';
+              return (
+                <div key={expense.id} className="expense-item">
+                  <div className="item-left">
+                    <span className="item-description">{expense.description}</span>
+                    <div className="item-meta">
+                      <span className="item-category">{expense.category?.name ?? 'Other'}</span>
+                      <span className="item-payment-method">{expense.paymentMethod ?? 'Cash'}</span>
+                      <span>•</span>
+                      <span>{formatDate(expense.date)}</span>
+                    </div>
+                  </div>
+                  <div className="expense-item-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span className="item-amount">-{formatAmount(expense.amount, expCurrency)}</span>
+                    <button
+                      onClick={() => onDelete(expense.id)}
+                      className="delete-expense-btn"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#f43f5e',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: 0.7,
+                        transition: 'opacity 0.2s',
+                      }}
+                      title="Delete expense"
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
+                    >
+                      <TrashIcon />
+                    </button>
                   </div>
                 </div>
-                <div className="expense-item-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span className="item-amount">-{formatAmount(expense.amount, expCurrency)}</span>
-                  <button
-                    onClick={() => onDelete(expense.id)}
-                    className="delete-expense-btn"
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#f43f5e',
-                      cursor: 'pointer',
-                      padding: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      opacity: 0.7,
-                      transition: 'opacity 0.2s',
-                    }}
-                    title="Delete expense"
-                    onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-                    onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
-                  >
-                    <TrashIcon />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
 
           {totalPages > 1 && (
             <div className="pagination-controls">

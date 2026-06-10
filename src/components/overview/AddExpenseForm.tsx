@@ -1,6 +1,6 @@
 import React from 'react';
 import { CURRENCY_OPTIONS } from '../../utils/currencies';
-import { NETWORK_STYLES, type PaymentMethod } from '../../utils/paymentMethods';
+import { PAYMENT_TYPE_LABELS, type PaymentMethod } from '../../utils/paymentMethods';
 import type { Category } from '../../hooks/useDashboard';
 
 interface AddExpenseFormProps {
@@ -18,32 +18,6 @@ interface AddExpenseFormProps {
   setExpenseCurrency: (v: string) => void;
   onSubmit: (e: React.FormEvent) => void;
 }
-
-const PaymentMethodOption: React.FC<{ method: PaymentMethod; selected: boolean; onClick: () => void }> = ({
-  method, selected, onClick,
-}) => {
-  const netStyle = method.network ? NETWORK_STYLES[method.network] : null;
-
-  return (
-    <button
-      type="button"
-      className={`pm-chip ${selected ? 'pm-chip-selected' : ''}`}
-      onClick={onClick}
-      title={method.label}
-    >
-      <span
-        className="pm-chip-dot"
-        style={{ background: method.color ?? (netStyle?.color ?? '#6b7280') }}
-      />
-      <span className="pm-chip-label">{method.label}</span>
-      {selected && (
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-      )}
-    </button>
-  );
-};
 
 export const AddExpenseForm: React.FC<AddExpenseFormProps> = ({
   categories,
@@ -129,24 +103,27 @@ export const AddExpenseForm: React.FC<AddExpenseFormProps> = ({
         </select>
       </div>
 
-      {/* Payment method chip picker */}
+      {/* Payment method selector */}
       <div className="form-group">
-        <label>Payment Method</label>
+        <label htmlFor="expense-payment-method">Payment Method</label>
         {paymentMethods.length === 0 ? (
           <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-            No payment methods. Add one in Settings.
+            No payment methods. Add one in Accounts.
           </p>
         ) : (
-          <div className="pm-chips-list">
+          <select
+            id="expense-payment-method"
+            className="form-input"
+            value={selectedPaymentMethodId || ''}
+            onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
+            required
+          >
             {paymentMethods.map((m) => (
-              <PaymentMethodOption
-                key={m.id}
-                method={m}
-                selected={selectedPaymentMethodId === m.id}
-                onClick={() => setSelectedPaymentMethodId(m.id)}
-              />
+              <option key={m.id} value={m.id}>
+                {m.label} ({PAYMENT_TYPE_LABELS[m.type]})
+              </option>
             ))}
-          </div>
+          </select>
         )}
       </div>
 

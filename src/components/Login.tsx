@@ -31,14 +31,14 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       onLoginSuccess(data.accessToken, data.user);
     } catch (error) {
       console.error('Login error:', error);
-      alert('Error al iniciar sesión con Google. ¿Está el backend corriendo?');
+      alert('Error logging in with Google. Is the backend running?');
     }
   };
 
   const handleMockLogin = () => {
     // A helpful helper for testing without setup
     onLoginSuccess('mock-token-12345', {
-      name: 'Usuario Demo',
+      name: 'Demo User',
       email: 'demo@expensetracker.com',
       picture: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
     });

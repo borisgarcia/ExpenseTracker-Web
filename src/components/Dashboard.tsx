@@ -9,7 +9,7 @@ import { FiltersBar } from './all-expenses/FiltersBar';
 import { ExpensesTable } from './all-expenses/ExpensesTable';
 import { PreferencesForm } from './settings/PreferencesForm';
 import { CategoryManager } from './settings/CategoryManager';
-import { PaymentMethodsManager } from './settings/PaymentMethodsManager';
+import { Accounts } from './accounts/Accounts';
 
 import './Dashboard.css';
 
@@ -19,7 +19,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
-  const [currentTab, setCurrentTab] = useState<'overview' | 'all_expenses' | 'settings'>('overview');
+  const [currentTab, setCurrentTab] = useState<'overview' | 'all_expenses' | 'accounts' | 'settings'>('overview');
   const d = useDashboard({ user });
 
   // Bind formatAmount to the user's preferred currency as default
@@ -72,6 +72,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <circle cx="3" cy="18" r="1"></circle>
           </svg>
           All Expenses
+        </button>
+        <button className={`tab-btn ${currentTab === 'accounts' ? 'active' : ''}`} onClick={() => setCurrentTab('accounts')}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '8px' }}>
+            <rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="2" y1="10" x2="22" y2="10"></line>
+          </svg>
+          Accounts
         </button>
         <button className={`tab-btn ${currentTab === 'settings' ? 'active' : ''}`} onClick={() => setCurrentTab('settings')}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '8px' }}>
@@ -161,17 +168,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             />
           </>
 
+        ) : currentTab === 'accounts' ? (
+          <Accounts
+            paymentMethods={d.paymentMethods}
+            onCreate={d.createPaymentMethod}
+            onUpdate={d.updatePaymentMethod}
+            onDelete={d.deletePaymentMethod}
+            onSetDefault={d.setDefaultPaymentMethod}
+            onPayCard={d.payCardPaymentMethod}
+          />
         ) : (
           <div className="main-grid">
+            <PreferencesForm
+              editLimit={d.editLimit}
+              setEditLimit={d.setEditLimit}
+              editCurrency={d.editCurrency}
+              setEditCurrency={d.setEditCurrency}
+              isSavingPrefs={d.isSavingPrefs}
+              onSubmit={d.handleUpdatePreferences}
+            />
             <div className="main-grid-column">
-              <PreferencesForm
-                editLimit={d.editLimit}
-                setEditLimit={d.setEditLimit}
-                editCurrency={d.editCurrency}
-                setEditCurrency={d.setEditCurrency}
-                isSavingPrefs={d.isSavingPrefs}
-                onSubmit={d.handleUpdatePreferences}
-              />
               <CategoryManager
                 categories={d.categories}
                 newCategoryName={d.newCategoryName}
@@ -181,13 +197,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 onDeleteCategory={d.handleDeleteCategory}
               />
             </div>
-            <PaymentMethodsManager
-              paymentMethods={d.paymentMethods}
-              onCreate={d.createPaymentMethod}
-              onUpdate={d.updatePaymentMethod}
-              onDelete={d.deletePaymentMethod}
-              onSetDefault={d.setDefaultPaymentMethod}
-            />
           </div>
         )}
       </main>

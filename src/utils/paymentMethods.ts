@@ -15,6 +15,16 @@ export interface PaymentMethod {
   color?: string | null;
   isDefault: boolean;
   isArchived: boolean;
+  balance: number;
+  currency: string;
+  linkedAccountId?: string | null;
+  linkedAccount?: {
+    id: string;
+    type: string;
+    label: string;
+    balance: number;
+    currency: string;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -29,6 +39,9 @@ export interface CreatePaymentMethodPayload {
   cutoffDay?: number;
   color?: string;
   isDefault?: boolean;
+  balance?: number;
+  currency?: string;
+  linkedAccountId?: string;
 }
 
 export interface UpdatePaymentMethodPayload {
@@ -40,15 +53,18 @@ export interface UpdatePaymentMethodPayload {
   cutoffDay?: number;
   color?: string;
   isDefault?: boolean;
+  balance?: number;
+  currency?: string;
+  linkedAccountId?: string;
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 export const PAYMENT_TYPE_LABELS: Record<PaymentMethodType, string> = {
-  CASH: 'Efectivo / Cash',
-  CREDIT_CARD: 'Tarjeta de Crédito',
-  DEBIT_CARD: 'Tarjeta de Débito',
-  BANK_ACCOUNT: 'Cuenta Bancaria',
+  CASH: 'Cash',
+  CREDIT_CARD: 'Credit Card',
+  DEBIT_CARD: 'Debit Card',
+  BANK_ACCOUNT: 'Bank Account',
 };
 
 export const CARD_NETWORKS: { value: CardNetwork; label: string }[] = [
@@ -56,7 +72,7 @@ export const CARD_NETWORKS: { value: CardNetwork; label: string }[] = [
   { value: 'MASTERCARD', label: 'Mastercard' },
   { value: 'AMEX', label: 'American Express' },
   { value: 'DISCOVER', label: 'Discover' },
-  { value: 'OTHER', label: 'Otra' },
+  { value: 'OTHER', label: 'Other' },
 ];
 
 /** Card network icon/color pairs for the UI wallet cards */

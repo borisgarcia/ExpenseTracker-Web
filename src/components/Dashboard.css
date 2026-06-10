@@ -82,6 +82,7 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 32px;
+  align-content: start; /* prevents layout panels from stretching vertically to fill the screen */
 }
 
 .dashboard-hero {
@@ -145,6 +146,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 32px;
+  align-items: start; /* prevents side-by-side components from stretching to match the taller sibling's height */
 }
 
 .main-grid-column {
@@ -186,13 +188,13 @@
 .expense-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 22px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
 }
 
 .form-group label {
@@ -462,6 +464,7 @@
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.01);
   border: 1px solid rgba(255, 255, 255, 0.03);
+  min-height: 528px; /* holds exactly 10 rows to prevent pagination controls from jumping */
 }
 
 .table-responsive::-webkit-scrollbar {
@@ -489,19 +492,18 @@
   grid-auto-rows: max-content; /* Evita que las tarjetas individuales se estiren verticalmente */
   gap: 16px;
   margin-bottom: 20px;
-  min-height: 464px; /* Prevents container height collapse during pagination */
+  min-height: 155px; /* Prevents container height collapse during pagination */
 }
 
 .wallet-card {
   border-radius: 16px;
-  padding: 18px 20px 16px;
+  padding: 16px 20px 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
   position: relative;
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  min-height: 140px;
+  min-height: 155px;
   cursor: default;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -531,11 +533,11 @@
 }
 
 .wallet-card-type {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .wallet-card-actions {
@@ -570,7 +572,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: #fbbf24;
   background: rgba(251, 191, 36, 0.15);
@@ -578,43 +580,129 @@
   padding: 2px 8px;
 }
 
-.wallet-card-number {
+/* Card Middle (Hero layout to solve wasted space) */
+.wallet-card-middle {
   display: flex;
-  gap: 8px;
-  font-size: 15px;
-  letter-spacing: 3px;
-  color: rgba(255, 255, 255, 0.5);
-  font-family: 'Courier New', monospace;
-  margin-top: auto;
+  flex-direction: column;
+  justify-content: center;
+  flex-grow: 1;
+  margin: 10px 0;
 }
 
-.wallet-last-four {
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 700;
+.wallet-balance-group {
+  display: flex;
+  flex-direction: column;
 }
 
-.wallet-cash-icon {
-  font-size: 28px;
-  margin-top: auto;
+.wallet-balance-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 2px;
+}
+
+.wallet-balance-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.wallet-balance-value.debt-color {
+  color: #fca5a5;
+}
+
+.wallet-credit-balance-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wallet-pay-btn {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.wallet-pay-btn:hover {
+  background: #fff;
+  color: #111827;
+  transform: scale(1.05);
+}
+
+.wallet-limit-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
 }
 
 .wallet-card-bottom {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+}
+
+.wallet-info-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
 }
 
 .wallet-card-label {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.95);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .wallet-card-bank {
-  font-size: 11px;
+  font-size: 10px;
   color: rgba(255, 255, 255, 0.55);
-  margin-top: 2px;
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wallet-card-linked-info {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 1px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wallet-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.wallet-card-number-compact {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.12);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .wallet-network-badge {
