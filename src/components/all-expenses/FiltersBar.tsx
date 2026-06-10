@@ -4,6 +4,7 @@ import type { Category } from '../../hooks/useDashboard';
 
 interface FiltersBarProps {
   categories: Category[];
+  paymentMethodOptions: string[];
   searchQuery: string;
   setSearchQuery: (v: string) => void;
   filterCategory: string;
@@ -16,6 +17,7 @@ interface FiltersBarProps {
 
 export const FiltersBar: React.FC<FiltersBarProps> = ({
   categories,
+  paymentMethodOptions,
   searchQuery,
   setSearchQuery,
   filterCategory,
@@ -65,10 +67,11 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
           onChange={(e) => setFilterPayment(e.target.value)}
         >
           <option value="">All Payment Methods</option>
-          <option value="Cash">Cash</option>
-          <option value="Credit Card">Credit Card</option>
-          <option value="Debit Card">Debit Card</option>
-          <option value="Bank Transfer">Bank Transfer</option>
+          {paymentMethodOptions.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
         </select>
       </div>
 

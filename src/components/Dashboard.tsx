@@ -9,6 +9,7 @@ import { FiltersBar } from './all-expenses/FiltersBar';
 import { ExpensesTable } from './all-expenses/ExpensesTable';
 import { PreferencesForm } from './settings/PreferencesForm';
 import { CategoryManager } from './settings/CategoryManager';
+import { PaymentMethodsManager } from './settings/PaymentMethodsManager';
 
 import './Dashboard.css';
 
@@ -107,14 +108,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <div className="main-grid">
               <AddExpenseForm
                 categories={d.categories}
+                paymentMethods={d.paymentMethods}
                 description={d.description}
                 setDescription={d.setDescription}
                 amount={d.amount}
                 setAmount={d.setAmount}
                 categoryId={d.categoryId}
                 setCategoryId={d.setCategoryId}
-                paymentMethod={d.paymentMethod}
-                setPaymentMethod={d.setPaymentMethod}
+                selectedPaymentMethodId={d.selectedPaymentMethodId}
+                setSelectedPaymentMethodId={d.setSelectedPaymentMethodId}
                 expenseCurrency={d.expenseCurrency}
                 setExpenseCurrency={d.setExpenseCurrency}
                 onSubmit={d.handleAddExpense}
@@ -135,6 +137,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           <>
             <FiltersBar
               categories={d.categories}
+              paymentMethodOptions={d.paymentMethodOptions}
               searchQuery={d.searchQuery}
               setSearchQuery={d.setSearchQuery}
               filterCategory={d.filterCategory}
@@ -178,6 +181,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 onDeleteCategory={d.handleDeleteCategory}
               />
             </div>
+            <PaymentMethodsManager
+              paymentMethods={d.paymentMethods}
+              onCreate={d.createPaymentMethod}
+              onUpdate={d.updatePaymentMethod}
+              onDelete={d.deletePaymentMethod}
+              onSetDefault={d.setDefaultPaymentMethod}
+            />
           </div>
         )}
       </main>

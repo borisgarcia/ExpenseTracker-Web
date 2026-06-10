@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import { DEFAULT_EXCHANGE_RATES, formatDate } from '../utils/currencies';
+import { usePaymentMethods } from './usePaymentMethods';
 
 export interface Expense {
   id: string;
@@ -9,6 +10,12 @@ export interface Expense {
   category: { id: string; name: string };
   date: string;
   paymentMethod?: string;
+  paymentMethodId?: string | null;
+  paymentMethodRef?: {
+    id: string; type: string; label: string;
+    bank?: string | null; network?: string | null;
+    lastFour?: string | null; color?: string | null;
+  } | null;
   currency?: string;
 }
 
@@ -28,11 +35,15 @@ export const useDashboard = ({ user }: UseDashboardOptions) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Payment methods (own hook)
+  const pm = usePaymentMethods();
+
   // ── Add expense form ───────────────────────────────────────────────────────
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('Cash');
+  // paymentMethodId: ID of selected PaymentMethod entity (null = unlinked)
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string | null>(null);
   const [expenseCurrency, setExpenseCurrency] = useState(user.currency ?? 'USD');
 
   // ── Preferences ───────────────────────────────────────────────────────────
@@ -72,6 +83,13 @@ export const useDashboard = ({ user }: UseDashboardOptions) => {
     }
   }, [user.monthlyBudget, user.currency]);
 
+  // Auto-select default payment method once loaded
+  useEffect(() => {
+    if (pm.defaultMethod && !selectedPaymentMethodId) {
+      setSelectedPaymentMethodId(pm.defaultMethod.id);
+    }
+  }, [pm.defaultMethod, selectedPaymentMethodId]);
+
   // Reset all-expenses page when any filter changes
   useEffect(() => {
     setAllPage(1);
@@ -87,7 +105,7 @@ export const useDashboard = ({ user }: UseDashboardOptions) => {
         if (data?.rates) {
           const rates: { [key: string]: number } = {
             USD: 1.0,
-            HNL: 0.0405, // Not in Frankfurter — kept as manual rate
+            HNL: 0.0405,
           };
           Object.keys(data.rates).forEach((curr) => {
             rates[curr] = 1 / data.rates[curr];
@@ -164,6 +182,11 @@ export const useDashboard = ({ user }: UseDashboardOptions) => {
     safeAllPage * allPageSize,
   );
 
+  // Unique payment method labels from all expenses for filters dropdown
+  const paymentMethodOptions = Array.from(
+    new Set(expenses.map((exp) => exp.paymentMethod || 'Cash'))
+  );
+
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,14 +196,14 @@ export const useDashboard = ({ user }: UseDashboardOptions) => {
         amount: parseFloat(amount),
         description,
         categoryId,
-        paymentMethod,
+        paymentMethodId: selectedPaymentMethodId ?? undefined,
         currency: expenseCurrency,
         date: new Date().toISOString(),
       });
       setExpenses([newExpense, ...expenses]);
       setDescription('');
       setAmount('');
-      setPaymentMethod('Cash');
+      // Keep selected payment method (user likely pays the same way)
       setExpenseCurrency(currency);
       setRecentPage(1);
       setAllPage(1);
@@ -272,13 +295,20 @@ export const useDashboard = ({ user }: UseDashboardOptions) => {
   return {
     // Data
     expenses, categories, isLoading,
+    // Payment methods
+    paymentMethods: pm.paymentMethods,
+    paymentMethodsLoading: pm.isLoading,
+    createPaymentMethod: pm.createMethod,
+    updatePaymentMethod: pm.updateMethod,
+    deletePaymentMethod: pm.deleteMethod,
+    setDefaultPaymentMethod: pm.setDefaultMethod,
     // Currency / budget
     currency, monthlyLimit, totalExpenses, balance, convertAmount,
     // Add expense form
     description, setDescription,
     amount, setAmount,
     categoryId, setCategoryId,
-    paymentMethod, setPaymentMethod,
+    selectedPaymentMethodId, setSelectedPaymentMethodId,
     expenseCurrency, setExpenseCurrency,
     handleAddExpense,
     // Recent expenses (Overview)
@@ -286,6 +316,7 @@ export const useDashboard = ({ user }: UseDashboardOptions) => {
     // All expenses
     filteredAllExpenses,
     paginatedAllExpenses, totalAllPages, safeAllPage, setAllPage,
+    paymentMethodOptions,
     // Filters
     searchQuery, setSearchQuery,
     filterCategory, setFilterCategory,
