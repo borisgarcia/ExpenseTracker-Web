@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 async function request(method: string, path: string, body?: any) {
   const token = localStorage.getItem('token');

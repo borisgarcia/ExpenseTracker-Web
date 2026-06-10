@@ -15,7 +15,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     try {
       // Send token to backend to verify and get a session token
-      const response = await fetch('http://localhost:3000/auth/google', {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/auth/google`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
