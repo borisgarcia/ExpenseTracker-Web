@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   PAYMENT_TYPE_LABELS,
   CARD_NETWORKS,
@@ -394,6 +394,23 @@ export const PaymentMethodsManager: React.FC<PaymentMethodsManagerProps> = ({
 }) => {
   const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 3;
+
+  const totalPages = Math.ceil(paymentMethods.length / pageSize) || 1;
+  const safePage = Math.min(currentPage, totalPages);
+
+  // Sync current page if paymentMethods delete/change pushes page out of bounds
+  useEffect(() => {
+    if (safePage !== currentPage) {
+      setCurrentPage(safePage);
+    }
+  }, [safePage, currentPage]);
+
+  const paginatedMethods = paymentMethods.slice(
+    (safePage - 1) * pageSize,
+    safePage * pageSize
+  );
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('¿Archivar este método de pago? Los gastos existentes seguirán mostrándolo.')) return;
@@ -420,7 +437,7 @@ export const PaymentMethodsManager: React.FC<PaymentMethodsManagerProps> = ({
       <h3 className="panel-title">Métodos de Pago</h3>
 
       <div className="wallet-grid">
-        {paymentMethods.map((m) => (
+        {paginatedMethods.map((m) => (
           <WalletCard
             key={m.id}
             method={m}
@@ -434,6 +451,28 @@ export const PaymentMethodsManager: React.FC<PaymentMethodsManagerProps> = ({
           />
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className="pagination-controls" style={{ marginTop: '0px', marginBottom: '20px', paddingTop: '12px' }}>
+          <button
+            disabled={safePage === 1}
+            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+            className="pagination-btn"
+          >
+            Previous
+          </button>
+          <span className="page-indicator" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+            Page {safePage} of {totalPages}
+          </span>
+          <button
+            disabled={safePage >= totalPages}
+            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+            className="pagination-btn"
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       <div id="pm-form-anchor" style={{ marginBottom: isAdding || editingMethod ? '12px' : '0px' }} />
 
