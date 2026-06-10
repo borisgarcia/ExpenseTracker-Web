@@ -112,26 +112,24 @@ export const ExpensesTable: React.FC<ExpensesTableProps> = ({
       </table>
     </div>
 
-    {totalPages > 1 && (
-      <div className="pagination-controls">
-        <button
-          disabled={currentPage === 1}
-          onClick={() => setPage((p) => Math.max(p - 1, 1))}
-          className="pagination-btn"
-        >
-          Previous
-        </button>
-        <span className="page-indicator">
-          Page {currentPage} of {totalPages}
-        </span>
-        <button
-          disabled={currentPage >= totalPages}
-          onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-          className="pagination-btn"
-        >
-          Next
-        </button>
-      </div>
-    )}
+    <div className="pagination-controls">
+      <button
+        disabled={currentPage === 1}
+        onClick={() => setPage((p) => Math.max(p - 1, 1))}
+        className="pagination-btn"
+      >
+        Previous
+      </button>
+      <span className="page-indicator">
+        Page {currentPage} of {totalPages}
+      </span>
+      <button
+        disabled={currentPage >= totalPages}
+        onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+        className="pagination-btn"
+      >
+        Next
+      </button>
+    </div>
   </section>
 );

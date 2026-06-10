@@ -138,27 +138,25 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
           )}
         </div>
 
-        {totalPages > 1 && (
-          <div className="pagination-controls" style={{ marginTop: '16px', paddingTop: '12px' }}>
-            <button
-              disabled={safePage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              className="pagination-btn"
-            >
-              Previous
-            </button>
-            <span className="page-indicator" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-              Page {safePage} of {totalPages}
-            </span>
-            <button
-              disabled={safePage >= totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              className="pagination-btn"
-            >
-              Next
-            </button>
-          </div>
-        )}
+        <div className="pagination-controls" style={{ marginTop: '16px', paddingTop: '12px' }}>
+          <button
+            disabled={safePage === 1}
+            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+            className="pagination-btn"
+          >
+            Previous
+          </button>
+          <span className="page-indicator" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+            Page {safePage} of {totalPages}
+          </span>
+          <button
+            disabled={safePage >= totalPages}
+            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+            className="pagination-btn"
+          >
+            Next
+          </button>
+        </div>
       </section>
     </>
   );

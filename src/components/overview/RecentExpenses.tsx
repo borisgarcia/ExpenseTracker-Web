@@ -31,9 +31,24 @@ export const RecentExpenses: React.FC<RecentExpensesProps> = ({
     <h3 className="panel-title">Recent Expenses</h3>
     <div className="expenses-list">
       {expenses.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
-          No expenses in the last 30 days.
-        </p>
+        <>
+          <div className="expenses-items-wrapper" style={{ minHeight: '408px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
+              No expenses in the last 30 days.
+            </p>
+          </div>
+          <div className="pagination-controls">
+            <button disabled className="pagination-btn">
+              Previous
+            </button>
+            <span className="page-indicator">
+              Page 1 of 1
+            </span>
+            <button disabled className="pagination-btn">
+              Next
+            </button>
+          </div>
+        </>
       ) : (
         <>
           <div className="expenses-items-wrapper" style={{ minHeight: '408px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -79,27 +94,25 @@ export const RecentExpenses: React.FC<RecentExpensesProps> = ({
             })}
           </div>
 
-          {totalPages > 1 && (
-            <div className="pagination-controls">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                className="pagination-btn"
-              >
-                Previous
-              </button>
-              <span className="page-indicator">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                disabled={currentPage >= totalPages}
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-                className="pagination-btn"
-              >
-                Next
-              </button>
-            </div>
-          )}
+          <div className="pagination-controls">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              className="pagination-btn"
+            >
+              Previous
+            </button>
+            <span className="page-indicator">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+              className="pagination-btn"
+            >
+              Next
+            </button>
+          </div>
         </>
       )}
     </div>
