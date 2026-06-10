@@ -10,6 +10,7 @@ import { ExpensesTable } from './all-expenses/ExpensesTable';
 import { PreferencesForm } from './settings/PreferencesForm';
 import { CategoryManager } from './settings/CategoryManager';
 import { Accounts } from './accounts/Accounts';
+import lempiraLogo from '../assets/lempira_logo.png';
 
 import './Dashboard.css';
 
@@ -19,7 +20,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
-  const [currentTab, setCurrentTab] = useState<'overview' | 'all_expenses' | 'accounts' | 'settings'>('overview');
+  const [currentTab, setCurrentTab] = useState<'overview' | 'all_expenses' | 'accounts' | 'categories' | 'settings'>('overview');
   const d = useDashboard({ user });
 
   // Bind formatAmount to the user's preferred currency as default
@@ -31,7 +32,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="dashboard-header">
         <div className="header-left">
-          <div className="brand-logo">MiPisto</div>
+          <div className="brand-icon-wrapper" style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            border: '1px solid rgba(245, 158, 11, 0.4)',
+            boxShadow: '0 0 10px rgba(245, 158, 11, 0.3)',
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#111827'
+          }}>
+            <img src={lempiraLogo} alt="Lempira Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
+          <div className="brand-logo">¿Y el pisto?</div>
         </div>
         <div className="header-right">
           <div className="user-profile">
@@ -80,6 +95,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           </svg>
           Accounts
         </button>
+        <button className={`tab-btn ${currentTab === 'categories' ? 'active' : ''}`} onClick={() => setCurrentTab('categories')}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '8px' }}>
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+          </svg>
+          Categories
+        </button>
         <button className={`tab-btn ${currentTab === 'settings' ? 'active' : ''}`} onClick={() => setCurrentTab('settings')}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '8px' }}>
             <circle cx="12" cy="12" r="3"></circle>
@@ -102,6 +124,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               <div className="welcome-msg">
                 <h2>Hello, {user.name.split(' ')[0]} 👋</h2>
                 <p>Here is your financial summary for this month.</p>
+              </div>
+              <div className="hero-logo-container">
+                <div className="hero-logo-wrapper">
+                  <img src={lempiraLogo} alt="Lempira Logo" className="hero-logo-image" />
+                </div>
               </div>
             </section>
 
@@ -177,8 +204,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             onSetDefault={d.setDefaultPaymentMethod}
             onPayCard={d.payCardPaymentMethod}
           />
-        ) : (
+        ) : currentTab === 'categories' ? (
           <div className="main-grid">
+            <CategoryManager
+              categories={d.categories}
+              newCategoryName={d.newCategoryName}
+              setNewCategoryName={d.setNewCategoryName}
+              isAddingCategory={d.isAddingCategory}
+              onAddCategory={d.handleAddCategory}
+              onDeleteCategory={d.handleDeleteCategory}
+            />
+          </div>
+        ) : (
+          <div style={{ maxWidth: '600px' }}>
             <PreferencesForm
               editLimit={d.editLimit}
               setEditLimit={d.setEditLimit}
@@ -187,16 +225,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               isSavingPrefs={d.isSavingPrefs}
               onSubmit={d.handleUpdatePreferences}
             />
-            <div className="main-grid-column">
-              <CategoryManager
-                categories={d.categories}
-                newCategoryName={d.newCategoryName}
-                setNewCategoryName={d.setNewCategoryName}
-                isAddingCategory={d.isAddingCategory}
-                onAddCategory={d.handleAddCategory}
-                onDeleteCategory={d.handleDeleteCategory}
-              />
-            </div>
           </div>
         )}
       </main>
