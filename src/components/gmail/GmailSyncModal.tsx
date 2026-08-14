@@ -60,9 +60,7 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
   if (!isOpen) return null;
 
   const performScan = async (token?: string) => {
-    // Clear previously displayed transactions when starting a new scan
     setParsedTransactions([]);
-
     const activeToken = token || googleAccessToken || localStorage.getItem('google_access_token') || undefined;
 
     if (!activeToken) {
@@ -83,6 +81,7 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
         const adjusted = res.transactions.map((tx: any) => ({
           ...tx,
           personInCharge,
+          detail: tx.detail || '',
         }));
         setParsedTransactions(adjusted);
         if (adjusted.length > 0) {
@@ -93,7 +92,8 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
       }
     } catch (err: any) {
       console.error('Scan error:', err);
-      setStatusMsg('Error al escanear tu cuenta de Gmail. Por favor intenta de nuevo.');
+      const msg = err?.message || err?.toString() || 'Por favor intenta de nuevo.';
+      setStatusMsg(`⚠️ Error al escanear Gmail: ${msg}`);
     } finally {
       setIsScanning(false);
     }
@@ -101,7 +101,7 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
 
   const handleParseText = async () => {
     if (!rawText.trim()) return;
-    setParsedTransactions([]); // Clear previous results
+    setParsedTransactions([]);
     setIsScanning(true);
     setStatusMsg('Analizando texto del correo con IA (Gemini)...');
     try {
@@ -110,8 +110,12 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
         defaultUser: personInCharge,
       });
       if (res && res.transactions) {
-        setParsedTransactions(res.transactions);
-        setStatusMsg(`Se extrajeron y clasificaron ${res.transactions.length} transacciones del texto.`);
+        const adjusted = res.transactions.map((tx: any) => ({
+          ...tx,
+          detail: tx.detail || '',
+        }));
+        setParsedTransactions(adjusted);
+        setStatusMsg(`Se extrajeron y clasificaron ${adjusted.length} transacciones del texto.`);
       }
     } catch (err: any) {
       console.error('Parse error:', err);
@@ -121,6 +125,12 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
     }
   };
 
+  const updateTxField = (idx: number, field: string, value: any) => {
+    setParsedTransactions((prev) =>
+      prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item))
+    );
+  };
+
   const handleImportAll = async () => {
     if (parsedTransactions.length === 0) return;
     setImporting(true);
@@ -128,7 +138,7 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
       const res = await api.post('/gmail/import', {
         transactions: parsedTransactions,
       });
-      alert(`¡Éxito! Se guardaron ${res.importedCount} transacciones en tu hoja.`);
+      alert(`¡Éxito! Se guardaron ${res.importedCount} transacciones en tu consola de gastos.`);
       onSuccess();
       handleCloseModal();
     } catch (err: any) {
@@ -178,7 +188,7 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
           {/* Person Selector */}
           <div className="modal-input-group" style={{ marginBottom: '16px' }}>
             <label style={{ fontSize: '0.85rem', color: '#9ca3af', display: 'block', marginBottom: '6px' }}>
-              Persona que realiza las transacciones (Encargado):
+              Persona que realiza las transacciones (Encargado por defecto):
             </label>
             <select
               value={personInCharge}
@@ -220,7 +230,7 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
               <textarea
                 value={rawText}
                 onChange={(e) => setRawText(e.target.value)}
-                placeholder="Pega aquí el texto de tu correo de banco real (ejemplo: Notificación BAC: Compra aprobada por L 2,450.00 en Tienda Diunsa...)"
+                placeholder="Pega aquí el texto de tu correo de banco real (ejemplo: Notificación BAC: Compra aprobada por L 2,450.00 en ESTACION SERC TEXAC...)"
                 rows={5}
                 className="raw-email-textarea"
               />
@@ -237,29 +247,98 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
 
           {statusMsg && <div className="status-banner">{statusMsg}</div>}
 
-          {/* Results Preview List */}
+          {/* Results Preview List with Editable Fields */}
           {parsedTransactions.length > 0 && (
             <div className="parsed-results-list">
-              <h4 style={{ margin: '12px 0 8px 0', color: '#f3f4f6' }}>
-                Transacciones Extraídas ({parsedTransactions.length})
+              <h4 style={{ margin: '14px 0 8px 0', color: '#f3f4f6' }}>
+                Transacciones Extraídas ({parsedTransactions.length}) - Puedes editar cualquier campo antes de guardar:
               </h4>
               <div className="results-scroll">
                 {parsedTransactions.map((tx, idx) => (
-                  <div key={idx} className="parsed-item-card">
-                    <div className="item-info">
-                      <div className="item-concept">{tx.concept}</div>
-                      <div className="item-meta">
-                        <span>📅 {tx.date}</span>
-                        <span>🏷️ {tx.categoryName}</span>
-                        <span>💳 {tx.paymentMethodName}</span>
-                        <span>👤 {tx.personInCharge}</span>
+                  <div key={idx} className="parsed-item-card-editable">
+                    <div className="card-row-top">
+                      <div className="input-field-group flex-2">
+                        <label className="field-label">Comercio / Concepto:</label>
+                        <input
+                          type="text"
+                          value={tx.concept}
+                          onChange={(e) => updateTxField(idx, 'concept', e.target.value)}
+                          className="editable-input concept-input-field"
+                          placeholder="Comercio..."
+                        />
                       </div>
-                    </div>
-                    <div className="item-right">
-                      <div className="item-amount">L {tx.amount.toFixed(2)}</div>
-                      <button onClick={() => removeItem(idx)} className="item-remove-btn">
+
+                      <div className="input-field-group flex-1">
+                        <label className="field-label">Monto (HNL):</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={tx.amount}
+                          onChange={(e) => updateTxField(idx, 'amount', parseFloat(e.target.value) || 0)}
+                          className="editable-input amount-input-field"
+                        />
+                      </div>
+
+                      <button onClick={() => removeItem(idx)} className="item-remove-btn" title="Quitar de la lista">
                         ✕
                       </button>
+                    </div>
+
+                    <div className="card-row-middle">
+                      <div className="input-field-group full-width">
+                        <label className="field-label">Detalle / Notas (Opcional):</label>
+                        <input
+                          type="text"
+                          value={tx.detail || ''}
+                          onChange={(e) => updateTxField(idx, 'detail', e.target.value)}
+                          className="editable-input detail-input-field"
+                          placeholder="Escribe un detalle opcional para esta transacción..."
+                        />
+                      </div>
+                    </div>
+
+                    <div className="card-row-bottom">
+                      <div className="input-field-group">
+                        <label className="field-label">Categoría:</label>
+                        <input
+                          type="text"
+                          value={tx.categoryName}
+                          onChange={(e) => updateTxField(idx, 'categoryName', e.target.value)}
+                          className="editable-input pill-input"
+                        />
+                      </div>
+
+                      <div className="input-field-group">
+                        <label className="field-label">Método de Pago:</label>
+                        <input
+                          type="text"
+                          value={tx.paymentMethodName}
+                          onChange={(e) => updateTxField(idx, 'paymentMethodName', e.target.value)}
+                          className="editable-input pm-input"
+                        />
+                      </div>
+
+                      <div className="input-field-group">
+                        <label className="field-label">Encargado:</label>
+                        <select
+                          value={tx.personInCharge}
+                          onChange={(e) => updateTxField(idx, 'personInCharge', e.target.value)}
+                          className="editable-select"
+                        >
+                          <option value="Boris">Boris</option>
+                          <option value="Sofia">Sofia</option>
+                        </select>
+                      </div>
+
+                      <div className="input-field-group">
+                        <label className="field-label">Fecha (CST):</label>
+                        <input
+                          type="date"
+                          value={tx.date}
+                          onChange={(e) => updateTxField(idx, 'date', e.target.value)}
+                          className="editable-input date-input"
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -267,7 +346,7 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
 
               <div className="import-action-bar">
                 <button onClick={handleImportAll} disabled={importing} className="confirm-import-btn">
-                  {importing ? 'Guardando...' : `📥 Guardar ${parsedTransactions.length} Transacciones en la Hoja`}
+                  {importing ? 'Guardando...' : `📥 Guardar ${parsedTransactions.length} Transacciones en la Consola`}
                 </button>
               </div>
             </div>

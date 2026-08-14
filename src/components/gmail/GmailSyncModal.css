@@ -19,7 +19,7 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
   width: 100%;
-  max-width: 650px;
+  max-width: 750px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -172,48 +172,94 @@
 }
 
 .results-scroll {
-  max-height: 220px;
+  max-height: 340px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  padding-right: 4px;
 }
 
-.parsed-item-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* ── Editable Transaction Card ──────────────────────────────────────────────── */
+.parsed-item-card-editable {
   background-color: #111827;
-  padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.item-concept {
-  font-weight: 600;
-  color: #ffffff;
-  font-size: 0.9rem;
-
-}
-
-.item-meta {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  font-size: 0.76rem;
-  color: #9ca3af;
-  margin-top: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
-.item-right {
+.card-row-top,
+.card-row-middle,
+.card-row-bottom {
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
 }
 
-.item-amount {
-  font-weight: bold;
+.card-row-bottom {
+  flex-wrap: wrap;
+}
+
+.input-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.flex-2 {
+  flex: 2;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.field-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.editable-input,
+.editable-select {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.editable-input:focus,
+.editable-select:focus {
+  border-color: #3b82f6;
+  background-color: #0f172a;
+}
+
+.concept-input-field {
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.amount-input-field {
+  font-weight: 800;
   color: #10b981;
   font-family: monospace;
+}
+
+.detail-input-field {
+  color: #cbd5e1;
 }
 
 .item-remove-btn {
@@ -222,6 +268,13 @@
   color: #ef4444;
   cursor: pointer;
   font-weight: bold;
+  padding: 4px 8px;
+  font-size: 1.1rem;
+  border-radius: 4px;
+}
+
+.item-remove-btn:hover {
+  background-color: rgba(239, 68, 68, 0.15);
 }
 
 .import-action-bar {
