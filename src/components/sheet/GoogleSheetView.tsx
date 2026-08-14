@@ -8,6 +8,7 @@ interface GoogleSheetViewProps {
   paymentMethods: any[];
   onUpdateExpense: (id: string, updated: any) => void;
   onDeleteExpense: (id: string) => void;
+  onDeleteAllExpenses?: () => Promise<void> | void;
   onOpenGmailSync: () => void;
   userName?: string;
 }
@@ -18,35 +19,39 @@ export const GoogleSheetView: React.FC<GoogleSheetViewProps> = ({
   paymentMethods,
   onUpdateExpense,
   onDeleteExpense,
+  onDeleteAllExpenses,
   onOpenGmailSync,
 }) => {
   const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
   const [personFilter, setPersonFilter] = useState<string>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState<boolean>(false);
+  const [isDeletingAll, setIsDeletingAll] = useState<boolean>(false);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
 
   // Category Color Map with modern vibrant pill styles
   const getCategoryStyle = (catName: string = 'Otros') => {
     const name = catName.toLowerCase();
     if (name.includes('transporte')) {
-      return { bg: 'linear-gradient(135deg, #d97706, #b45309)', color: '#ffffff' }; // Amber/Orange
+      return { bg: 'rgba(217, 119, 6, 0.22)', color: '#fbbf24', border: '1px solid rgba(217, 119, 6, 0.45)' };
     }
     if (name.includes('servicio')) {
-      return { bg: 'linear-gradient(135deg, #4b5563, #374151)', color: '#ffffff' }; // Sleek Gray
+      return { bg: 'rgba(75, 85, 99, 0.25)', color: '#9ca3af', border: '1px solid rgba(75, 85, 99, 0.45)' };
     }
     if (name.includes('casa')) {
-      return { bg: 'linear-gradient(135deg, #f97316, #ea580c)', color: '#ffffff' }; // Warm Coral/Orange
+      return { bg: 'rgba(249, 115, 22, 0.22)', color: '#fb923c', border: '1px solid rgba(249, 115, 22, 0.45)' };
     }
     if (name.includes('supermercado') || name.includes('super')) {
-      return { bg: 'linear-gradient(135deg, #a855f7, #7e22ce)', color: '#ffffff' }; // Vibrant Purple
+      return { bg: 'rgba(168, 85, 247, 0.22)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.45)' };
     }
     if (name.includes('mascota')) {
-      return { bg: 'linear-gradient(135deg, #14b8a6, #0f766e)', color: '#ffffff' }; // Emerald/Teal
+      return { bg: 'rgba(20, 184, 166, 0.22)', color: '#2dd4bf', border: '1px solid rgba(20, 184, 166, 0.45)' };
     }
     if (name.includes('bienes')) {
-      return { bg: 'linear-gradient(135deg, #6366f1, #4338ca)', color: '#ffffff' }; // Indigo
+      return { bg: 'rgba(99, 102, 241, 0.22)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.45)' };
     }
-    return { bg: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#ffffff' }; // Electric Blue (Otros)
+    return { bg: 'rgba(59, 130, 246, 0.22)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.45)' };
   };
 
   // Month list from expenses
@@ -124,27 +129,46 @@ export const GoogleSheetView: React.FC<GoogleSheetViewProps> = ({
     return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
   };
 
-  const handleExportCSV = () => {
-    const headers = ['Fecha', 'Categoría', 'Concepto', 'Detalle', 'Método de Pago', 'Encargado', 'Monto'];
-    const rows = filteredExpenses.map((exp) => [
-      formatDateSheet(exp.date),
-      exp.category?.name || 'Otros',
-      `"${(exp.description || '').replace(/"/g, '""')}"`,
-      `"${(exp.detail || '').replace(/"/g, '""')}"`,
-      exp.paymentMethod || 'Efectivo',
-      exp.personInCharge || 'Boris',
-      exp.amount.toFixed(2),
-    ]);
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const headers = ['Fecha', 'Categoría', 'Concepto', 'Detalle', 'Método de Pago', 'Encargado', 'Monto'];
+      const rows = filteredExpenses.map((exp) => [
+        formatDateSheet(exp.date),
+        exp.category?.name || 'Otros',
+        `"${(exp.description || '').replace(/"/g, '""')}"`,
+        `"${(exp.detail || '').replace(/"/g, '""')}"`,
+        exp.paymentMethod || 'Efectivo',
+        exp.personInCharge || 'Boris',
+        exp.amount.toFixed(2),
+      ]);
 
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Registro_Gastos_${selectedMonth}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Registro_Gastos_${selectedMonth}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleConfirmDeleteAll = async () => {
+    if (!onDeleteAllExpenses) return;
+    setIsDeletingAll(true);
+    try {
+      await onDeleteAllExpenses();
+    } catch (err) {
+      console.error('Failed to delete all expenses:', err);
+    } finally {
+      setIsDeletingAll(false);
+      setIsDeleteAllModalOpen(false);
+    }
   };
 
   return (
@@ -154,16 +178,16 @@ export const GoogleSheetView: React.FC<GoogleSheetViewProps> = ({
         <div className="header-title-block">
           <div className="header-badge">
             <span className="badge-glow"></span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <line x1="3" y1="9" x2="21" y2="9" />
               <line x1="9" y1="21" x2="9" y2="9" />
             </svg>
             Consola de Finanzas
           </div>
-          <h2 className="header-title">Registro Inteligente de Transacciones</h2>
+          <h2 className="header-title">Hoja de Registro de Transacciones</h2>
           <p className="header-subtitle">
-            Vista ejecutiva de ingresos, gastos y notificaciones bancarias escaneadas por IA.
+            Gestión ejecutiva de compras, gastos y notificaciones bancarias en tiempo real.
           </p>
         </div>
 
@@ -175,18 +199,36 @@ export const GoogleSheetView: React.FC<GoogleSheetViewProps> = ({
             ⚡ Escanear Gmail
           </button>
 
-          <button onClick={handleExportCSV} className="modern-export-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            Exportar CSV
+          <button onClick={handleExportCSV} disabled={isExporting} className="modern-export-btn">
+            {isExporting ? (
+              <>
+                <span className="btn-spinner"></span>
+                Exportando CSV...
+              </>
+            ) : (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Exportar CSV
+              </>
+            )}
           </button>
+
+          {expenses.length > 0 && (
+            <button onClick={() => setIsDeleteAllModalOpen(true)} className="delete-all-btn" title="Eliminar todos los registros">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" />
+              </svg>
+              Eliminar Todo
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ── Executive Metric KPI Cards ───────────────────────────────────────── */}
+      {/* ── Executive Metric KPI Summary Cards ─────────────────────────────────── */}
       <div className="kpi-cards-grid">
         <div className="kpi-card total-kpi">
           <div className="kpi-label">Total Gastos ({filteredExpenses.length} reg.)</div>
@@ -215,7 +257,7 @@ export const GoogleSheetView: React.FC<GoogleSheetViewProps> = ({
         </div>
       </div>
 
-      {/* ── Toolbar Filters ─────────────────────────────────────────────────── */}
+      {/* ── Toolbar Filters & Search ───────────────────────────────────────── */}
       <div className="modern-toolbar">
         <div className="toolbar-search">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
@@ -226,7 +268,7 @@ export const GoogleSheetView: React.FC<GoogleSheetViewProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por concepto, detalle o banco..."
+            placeholder="Buscar por concepto, detalle o comercio..."
             className="search-input"
           />
           {searchQuery && (
@@ -290,161 +332,198 @@ export const GoogleSheetView: React.FC<GoogleSheetViewProps> = ({
         </div>
       </div>
 
-      {/* ── Modern Interactive Data Table ────────────────────────────────────── */}
+      {/* ── High-Contrast Modern Data Grid Table ───────────────────────────── */}
       <div className="modern-table-card">
-        <table className="modern-table">
-          <thead>
-            <tr>
-              <th style={{ width: '45px', textAlign: 'center' }}>#</th>
-              <th style={{ width: '110px' }}>Fecha</th>
-              <th style={{ width: '160px' }}>Categoría</th>
-              <th style={{ minWidth: '220px' }}>Concepto</th>
-              <th style={{ minWidth: '200px' }}>Detalle</th>
-              <th style={{ width: '180px' }}>Método de Pago</th>
-              <th style={{ width: '130px' }}>Encargado</th>
-              <th style={{ width: '140px', textAlign: 'right' }}>Monto</th>
-              <th style={{ width: '50px', textAlign: 'center' }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredExpenses.length === 0 ? (
+        <div className="table-responsive-wrapper">
+          <table className="modern-table">
+            <thead>
               <tr>
-                <td colSpan={9} className="empty-state-cell">
-                  <div className="empty-state-content">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="1.5">
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <line x1="9" y1="9" x2="15" y2="15" />
-                      <line x1="15" y1="9" x2="9" y2="15" />
-                    </svg>
-                    <p>No se encontraron transacciones registradas.</p>
-                  </div>
-                </td>
+                <th className="th-idx">#</th>
+                <th className="th-date">FECHA</th>
+                <th className="th-category">CATEGORÍA</th>
+                <th className="th-concept">CONCEPTO</th>
+                <th className="th-detail">DETALLE</th>
+                <th className="th-pm">MÉTODOS DE PAGO</th>
+                <th className="th-person">ENCARGADO</th>
+                <th className="th-amount">MONTO</th>
+                <th className="th-action"></th>
               </tr>
-            ) : (
-              filteredExpenses.map((exp, idx) => {
-                const catStyle = getCategoryStyle(exp.category?.name);
-                const person = exp.personInCharge || 'Boris';
-                const isSofia = person.toLowerCase() === 'sofia';
+            </thead>
+            <tbody>
+              {filteredExpenses.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="empty-state-cell">
+                    <div className="empty-state-content">
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <line x1="9" y1="9" x2="15" y2="15" />
+                        <line x1="15" y1="9" x2="9" y2="15" />
+                      </svg>
+                      <p>No se encontraron transacciones registradas.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredExpenses.map((exp, idx) => {
+                  const catStyle = getCategoryStyle(exp.category?.name);
+                  const person = exp.personInCharge || 'Boris';
+                  const isSofia = person.toLowerCase() === 'sofia';
 
-                return (
-                  <tr key={exp.id} className="modern-row">
-                    <td className="row-idx">{idx + 1}</td>
+                  return (
+                    <tr key={exp.id} className="modern-row">
+                      <td className="row-idx">{idx + 1}</td>
 
-                    {/* Fecha */}
-                    <td className="date-cell">{formatDateSheet(exp.date)}</td>
+                      {/* Fecha */}
+                      <td className="date-cell">{formatDateSheet(exp.date)}</td>
 
-                    {/* Categoría Dropdown Pill */}
-                    <td className="category-cell">
-                      <select
-                        value={exp.category?.id || ''}
-                        onChange={(e) => onUpdateExpense(exp.id, { categoryId: e.target.value })}
-                        className="modern-category-pill"
-                        style={{ background: catStyle.bg, color: catStyle.color }}
-                      >
-                        {categories.map((c) => (
-                          <option key={c.id} value={c.id} style={{ background: '#1e293b', color: '#f8fafc' }}>
-                            {c.name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
+                      {/* Categoría Dropdown Pill */}
+                      <td className="category-cell">
+                        <select
+                          value={exp.category?.id || ''}
+                          onChange={(e) => onUpdateExpense(exp.id, { categoryId: e.target.value })}
+                          className="modern-category-pill"
+                          style={{ background: catStyle.bg, color: catStyle.color, border: catStyle.border }}
+                        >
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.id} style={{ background: '#1e293b', color: '#f8fafc' }}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
 
-                    {/* Concepto Inline Edit */}
-                    <td className="concept-cell">
-                      <input
-                        type="text"
-                        defaultValue={exp.description || ''}
-                        onBlur={(e) => {
-                          if (e.target.value !== exp.description) {
-                            onUpdateExpense(exp.id, { description: e.target.value });
-                          }
-                        }}
-                        className="modern-cell-input concept-input"
-                        placeholder="Concepto..."
-                      />
-                    </td>
+                      {/* Concepto Inline Edit */}
+                      <td className="concept-cell">
+                        <input
+                          type="text"
+                          defaultValue={exp.description || ''}
+                          onBlur={(e) => {
+                            if (e.target.value !== exp.description) {
+                              onUpdateExpense(exp.id, { description: e.target.value });
+                            }
+                          }}
+                          className="modern-cell-input concept-input"
+                          placeholder="Concepto..."
+                        />
+                      </td>
 
-                    {/* Detalle Inline Edit */}
-                    <td className="detail-cell">
-                      <input
-                        type="text"
-                        defaultValue={exp.detail || ''}
-                        onBlur={(e) => {
-                          if (e.target.value !== exp.detail) {
-                            onUpdateExpense(exp.id, { detail: e.target.value });
-                          }
-                        }}
-                        className="modern-cell-input"
-                        placeholder="Detalle de compra..."
-                      />
-                    </td>
+                      {/* Detalle Inline Edit */}
+                      <td className="detail-cell">
+                        <input
+                          type="text"
+                          defaultValue={exp.detail || ''}
+                          onBlur={(e) => {
+                            if (e.target.value !== exp.detail) {
+                              onUpdateExpense(exp.id, { detail: e.target.value });
+                            }
+                          }}
+                          className="modern-cell-input detail-input"
+                          placeholder="Detalle opcional..."
+                        />
+                      </td>
 
-                    {/* Método de Pago Dropdown */}
-                    <td className="pm-cell">
-                      <select
-                        value={exp.paymentMethodId || ''}
-                        onChange={(e) => {
-                          const pm = paymentMethods.find((p) => p.id === e.target.value);
-                          onUpdateExpense(exp.id, {
-                            paymentMethodId: e.target.value || null,
-                            paymentMethod: pm ? pm.label : 'Efectivo',
-                          });
-                        }}
-                        className="modern-pm-select"
-                      >
-                        <option value="">{exp.paymentMethod || 'Efectivo'}</option>
-                        {paymentMethods.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
+                      {/* Método de Pago Dropdown */}
+                      <td className="pm-cell">
+                        <select
+                          value={exp.paymentMethodId || ''}
+                          onChange={(e) => {
+                            const pm = paymentMethods.find((p) => p.id === e.target.value);
+                            onUpdateExpense(exp.id, {
+                              paymentMethodId: e.target.value || null,
+                              paymentMethod: pm ? pm.label : 'Efectivo',
+                            });
+                          }}
+                          className="modern-pm-select"
+                        >
+                          <option value="">{exp.paymentMethod || 'Efectivo'}</option>
+                          {paymentMethods.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
 
-                    {/* Encargado Pill Dropdown */}
-                    <td className="person-cell">
-                      <select
-                        value={person}
-                        onChange={(e) => onUpdateExpense(exp.id, { personInCharge: e.target.value })}
-                        className={`modern-person-pill ${isSofia ? 'sofia-pill' : 'boris-pill'}`}
-                      >
-                        <option value="Boris">Boris</option>
-                        <option value="Sofia">Sofia</option>
-                        <option value="Otro">Otro</option>
-                      </select>
-                    </td>
+                      {/* Encargado Pill Dropdown */}
+                      <td className="person-cell">
+                        <select
+                          value={person}
+                          onChange={(e) => onUpdateExpense(exp.id, { personInCharge: e.target.value })}
+                          className={`modern-person-pill ${isSofia ? 'sofia-pill' : 'boris-pill'}`}
+                        >
+                          <option value="Boris">Boris</option>
+                          <option value="Sofia">Sofia</option>
+                          <option value="Otro">Otro</option>
+                        </select>
+                      </td>
 
-                    {/* Monto */}
-                    <td className="amount-cell">{formatHNL(exp.amount)}</td>
+                      {/* Monto */}
+                      <td className="amount-cell">{formatHNL(exp.amount)}</td>
 
-                    {/* Delete Action */}
-                    <td className="action-cell">
-                      <button
-                        onClick={() => onDeleteExpense(exp.id)}
-                        className="modern-delete-btn"
-                        title="Eliminar registro"
-                      >
-                        ✕
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
+                      {/* Delete Action */}
+                      <td className="action-cell">
+                        <button
+                          onClick={() => onDeleteExpense(exp.id)}
+                          className="modern-delete-btn"
+                          title="Eliminar registro"
+                        >
+                          ✕
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+            {filteredExpenses.length > 0 && (
+              <tfoot>
+                <tr className="modern-footer-row">
+                  <td colSpan={7} className="footer-label">
+                    Total General ({filteredExpenses.length} registros):
+                  </td>
+                  <td className="footer-amount">{formatHNL(totalAmountHNL)}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
             )}
-          </tbody>
-          {filteredExpenses.length > 0 && (
-            <tfoot>
-              <tr className="modern-footer-row">
-                <td colSpan={7} className="footer-label">
-                  Total General ({filteredExpenses.length} registros):
-                </td>
-                <td className="footer-amount">{formatHNL(totalAmountHNL)}</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
+          </table>
+        </div>
       </div>
+
+      {/* ── Confirmation Modal for Delete All with Spinner Loading ──────────── */}
+      {isDeleteAllModalOpen && (
+        <div className="modal-backdrop" onClick={() => !isDeletingAll && setIsDeleteAllModalOpen(false)}>
+          <div className="delete-confirm-modal" onClick={(e) => e.stopPropagation()}>
+            {isDeletingAll ? (
+              <div className="deleting-loading-state">
+                <div className="deleting-spinner"></div>
+                <h3 className="confirm-title" style={{ marginTop: '16px' }}>Eliminando Transacciones...</h3>
+                <p className="confirm-desc">
+                  Por favor espera un momento mientras eliminamos los registros y reajustamos los saldos de tus tarjetas.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="confirm-icon-wrapper">⚠️</div>
+                <h3 className="confirm-title">¿Eliminar Todas las Transacciones?</h3>
+                <p className="confirm-desc">
+                  Esta acción eliminará de forma permanente los <strong>{expenses.length} registros de gastos</strong> en tu cuenta y reajustará el saldo de tus tarjetas y cuentas.
+                  <br /><br />
+                  <span style={{ color: '#ef4444', fontWeight: 600 }}>Esta acción no se puede deshacer.</span>
+                </p>
+                <div className="confirm-actions">
+                  <button onClick={() => setIsDeleteAllModalOpen(false)} className="confirm-cancel-btn">
+                    Cancelar
+                  </button>
+                  <button onClick={handleConfirmDeleteAll} className="confirm-delete-btn">
+                    Sí, Eliminar Todo
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

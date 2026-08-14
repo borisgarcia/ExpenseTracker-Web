@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
+import Swal from 'sweetalert2';
 import { api } from '../../utils/api';
 import './GmailSyncModal.css';
 
@@ -17,17 +18,19 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
   userName = 'Boris',
 }) => {
   const [activeTab, setActiveTab] = useState<'scan' | 'paste'>('scan');
-  const [rawText, setRawText] = useState('');
-  const [personInCharge, setPersonInCharge] = useState(userName || 'Boris');
-  const [isScanning, setIsScanning] = useState(false);
-  const [parsedTransactions, setParsedTransactions] = useState<any[]>([]);
-  const [importing, setImporting] = useState(false);
-  const [statusMsg, setStatusMsg] = useState('');
-  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(
-    localStorage.getItem('google_access_token')
+  const [personInCharge, setPersonInCharge] = useState<string>(userName);
+  const [googleAccessToken, setGoogleAccessToken] = useState<string>(
+    () => localStorage.getItem('google_access_token') || ''
   );
 
+  const [rawText, setRawText] = useState<string>('');
+  const [parsedTransactions, setParsedTransactions] = useState<any[]>([]);
+  const [statusMsg, setStatusMsg] = useState<string>('');
+  const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [importing, setImporting] = useState<boolean>(false);
+
   const handleCloseModal = () => {
+    if (importing) return; // Prevent closing while importing
     setParsedTransactions([]);
     setStatusMsg('');
     setRawText('');
@@ -35,6 +38,7 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
   };
 
   const handleTabChange = (tab: 'scan' | 'paste') => {
+    if (importing || isScanning) return;
     setActiveTab(tab);
     setParsedTransactions([]);
     setStatusMsg('');
@@ -47,29 +51,36 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
       if (tokenResponse.access_token) {
         localStorage.setItem('google_access_token', tokenResponse.access_token);
         setGoogleAccessToken(tokenResponse.access_token);
-        setStatusMsg('¡Cuenta de Gmail conectada! Escaneando tus correos reales...');
+        setStatusMsg('¡Cuenta de Gmail autorizada! Escaneando correos reales...');
         performScan(tokenResponse.access_token);
       }
     },
     onError: (error) => {
       console.error('Gmail OAuth error:', error);
-      setStatusMsg('No se pudo conectar a Gmail.');
+      setStatusMsg('⚠️ No se pudo conectar a la cuenta de Gmail.');
+      setIsScanning(false);
     },
   });
 
   if (!isOpen) return null;
+
+  const forceReconnect = () => {
+    localStorage.removeItem('google_access_token');
+    setGoogleAccessToken('');
+    loginWithGmailScope();
+  };
 
   const performScan = async (token?: string) => {
     setParsedTransactions([]);
     const activeToken = token || googleAccessToken || localStorage.getItem('google_access_token') || undefined;
 
     if (!activeToken) {
-      setStatusMsg('ℹ️ Para escanear tus correos reales, haz clic en el botón azul "🔑 Conectar mi Gmail Real".');
+      loginWithGmailScope();
       return;
     }
 
     setIsScanning(true);
-    setStatusMsg('Buscando notificaciones bancarias reales en tu bandeja de entrada de Gmail...');
+    setStatusMsg('Buscando notificaciones bancarias en tu bandeja de Gmail...');
 
     try {
       const res = await api.post('/gmail/sync-live', {
@@ -85,17 +96,30 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
         }));
         setParsedTransactions(adjusted);
         if (adjusted.length > 0) {
-          setStatusMsg(`¡Escaneo real completado! Se encontraron ${adjusted.length} transacciones en tu Gmail.`);
+          setStatusMsg(`¡Escaneo completado! Se encontraron ${adjusted.length} transacciones en tu Gmail.`);
         } else {
           setStatusMsg('No se encontraron notificaciones bancarias nuevas en tu cuenta de Gmail.');
         }
       }
     } catch (err: any) {
       console.error('Scan error:', err);
-      const msg = err?.message || err?.toString() || 'Por favor intenta de nuevo.';
-      setStatusMsg(`⚠️ Error al escanear Gmail: ${msg}`);
+      // Remove stale/expired token from storage so next click launches OAuth popup
+      localStorage.removeItem('google_access_token');
+      setGoogleAccessToken('');
+
+      setStatusMsg('🔑 Tu pase de acceso a Gmail expiró. Por favor haz clic en "Conectar y Escanear mi Gmail" para ingresar de nuevo.');
     } finally {
       setIsScanning(false);
+    }
+  };
+
+  const handleScanButtonClick = () => {
+    const activeToken = googleAccessToken || localStorage.getItem('google_access_token');
+    if (activeToken) {
+      performScan(activeToken);
+    } else {
+      // Synchronous call inside user click handler allows browser popup to open cleanly
+      loginWithGmailScope();
     }
   };
 
@@ -103,7 +127,7 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
     if (!rawText.trim()) return;
     setParsedTransactions([]);
     setIsScanning(true);
-    setStatusMsg('Analizando texto del correo con IA (Gemini)...');
+    setStatusMsg('Analizando texto del correo con IA...');
     try {
       const res = await api.post('/gmail/parse-text', {
         text: rawText,
@@ -119,51 +143,74 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
       }
     } catch (err: any) {
       console.error('Parse error:', err);
-      setStatusMsg('Error al analizar el texto.');
+      setStatusMsg('⚠️ Error al analizar el texto.');
     } finally {
       setIsScanning(false);
     }
   };
 
   const updateTxField = (idx: number, field: string, value: any) => {
+    if (importing) return;
     setParsedTransactions((prev) =>
       prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item))
     );
   };
 
   const handleImportAll = async () => {
-    if (parsedTransactions.length === 0) return;
+    if (parsedTransactions.length === 0 || importing) return;
     setImporting(true);
     try {
       const res = await api.post('/gmail/import', {
         transactions: parsedTransactions,
       });
-      alert(`¡Éxito! Se guardaron ${res.importedCount} transacciones en tu consola de gastos.`);
       onSuccess();
       handleCloseModal();
+      
+      // Modern Swal dark theme success alert
+      Swal.fire({
+        icon: 'success',
+        title: '¡Transacciones Guardadas!',
+        text: `Se importaron ${res.importedCount} transacciones a tu consola de gastos.`,
+        background: '#1f2937',
+        color: '#f8fafc',
+        confirmButtonColor: '#107c41',
+        confirmButtonText: 'Genial, Continuar',
+        customClass: {
+          popup: 'modern-swal-dark-popup',
+        },
+      });
     } catch (err: any) {
       console.error('Import error:', err);
-      alert('Error al guardar transacciones en la base de datos.');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al importar',
+        text: 'Ocurrió un problema al guardar las transacciones en la base de datos.',
+        background: '#1f2937',
+        color: '#f8fafc',
+        confirmButtonColor: '#ef4444',
+      });
     } finally {
       setImporting(false);
     }
   };
 
   const removeItem = (idx: number) => {
+    if (importing) return;
     setParsedTransactions((prev) => prev.filter((_, i) => i !== idx));
   };
 
   return (
-    <div className="modal-backdrop" onClick={handleCloseModal}>
+    <div className="modal-backdrop" onClick={() => !importing && handleCloseModal()}>
       <div className="gmail-modal" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
         <div className="gmail-modal-header">
           <div className="header-title">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="#ea4335" style={{ marginRight: '8px' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#ea4335" style={{ marginRight: '8px' }}>
               <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
             </svg>
             <h3>Importador de Transacciones de Gmail</h3>
           </div>
-          <button onClick={handleCloseModal} className="modal-close-btn">
+          <button onClick={handleCloseModal} disabled={importing} className="modal-close-btn" title="Cerrar modal">
             ✕
           </button>
         </div>
@@ -173,27 +220,28 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
           <button
             className={`gmail-tab-btn ${activeTab === 'scan' ? 'active' : ''}`}
             onClick={() => handleTabChange('scan')}
+            disabled={importing || isScanning}
           >
             Escaneo de Gmail
           </button>
           <button
             className={`gmail-tab-btn ${activeTab === 'paste' ? 'active' : ''}`}
             onClick={() => handleTabChange('paste')}
+            disabled={importing || isScanning}
           >
             Pegar Texto de Correo
           </button>
         </div>
 
         <div className="gmail-modal-body">
-          {/* Person Selector */}
-          <div className="modal-input-group" style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '0.85rem', color: '#9ca3af', display: 'block', marginBottom: '6px' }}>
-              Persona que realiza las transacciones (Encargado por defecto):
-            </label>
+          {/* Narrow Compact Person Selector */}
+          <div className="modal-input-group person-group-compact">
+            <label className="person-select-label">Encargado por defecto:</label>
             <select
               value={personInCharge}
               onChange={(e) => setPersonInCharge(e.target.value)}
-              className="person-select-input"
+              disabled={importing || isScanning}
+              className="person-select-input-narrow"
             >
               <option value="Boris">Boris</option>
               <option value="Sofia">Sofia</option>
@@ -203,26 +251,48 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
           {activeTab === 'scan' ? (
             <div className="scan-section">
               <p className="scan-desc">
-                Escanea tu bandeja de entrada en búsqueda de notificaciones bancarias reales de BAC Credomatic, Ficohsa, Banpaís, Banco Atlántida, PayPal, etc.
+                Escanea tu bandeja de entrada en búsqueda de notificaciones bancarias de BAC Credomatic, Ficohsa, Banpaís, Banco Atlántida, PayPal, etc.
               </p>
 
-              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              {/* UNIFIED SINGLE BUTTON */}
+              <div style={{ marginTop: '12px' }}>
                 <button
-                  onClick={() => loginWithGmailScope()}
-                  className="start-scan-btn"
-                  style={{ background: 'linear-gradient(135deg, #4285f4, #1a73e8)', flex: 1 }}
+                  onClick={handleScanButtonClick}
+                  disabled={isScanning || importing}
+                  className="start-scan-btn unified-scan-btn"
                 >
-                  🔑 Conectar mi Gmail Real
+                  {isScanning ? (
+                    <>
+                      <span className="btn-spinner"></span>
+                      Escaneando bandeja de Gmail...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '6px' }}>
+                        <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+                      </svg>
+                      Conectar y Escanear mi Gmail
+                    </>
+                  )}
                 </button>
 
-                <button
-                  onClick={() => performScan()}
-                  disabled={isScanning}
-                  className="start-scan-btn"
-                  style={{ flex: 1 }}
-                >
-                  {isScanning ? 'Escaneando...' : '🔍 Escanear Correos'}
-                </button>
+                <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={forceReconnect}
+                    disabled={isScanning || importing}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#9ca3af',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    🔄 Cambiar o Reconectar mi cuenta de Gmail
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
@@ -230,56 +300,78 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
               <textarea
                 value={rawText}
                 onChange={(e) => setRawText(e.target.value)}
-                placeholder="Pega aquí el texto de tu correo de banco real (ejemplo: Notificación BAC: Compra aprobada por L 2,450.00 en ESTACION SERC TEXAC...)"
+                disabled={isScanning || importing}
+                placeholder="Pega aquí el texto de tu correo bancario (ejemplo: BAC Credomatic: Compra aprobada por L 1,400.00 en ESTACION SERC TEXAC...)"
                 rows={5}
                 className="raw-email-textarea"
               />
               <button
                 onClick={handleParseText}
-                disabled={isScanning || !rawText.trim()}
-                className="start-scan-btn"
+                disabled={isScanning || importing || !rawText.trim()}
+                className="start-scan-btn unified-scan-btn"
                 style={{ marginTop: '10px' }}
               >
-                {isScanning ? 'Analizando...' : '⚡ Analizar Correo con IA'}
+                {isScanning ? (
+                  <>
+                    <span className="btn-spinner"></span>
+                    Analizando texto con IA...
+                  </>
+                ) : (
+                  '⚡ Analizar Correo con IA'
+                )}
               </button>
             </div>
           )}
 
-          {statusMsg && <div className="status-banner">{statusMsg}</div>}
+          {/* Scanning Box Loading Indicator */}
+          {isScanning && (
+            <div className="scanning-loading-box">
+              <div className="scanning-spinner"></div>
+              <p className="scanning-text">🔍 Buscando notificaciones bancarias en tu Gmail...</p>
+            </div>
+          )}
+
+          {statusMsg && !isScanning && <div className="status-banner">{statusMsg}</div>}
 
           {/* Results Preview List with Editable Fields */}
           {parsedTransactions.length > 0 && (
             <div className="parsed-results-list">
-              <h4 style={{ margin: '14px 0 8px 0', color: '#f3f4f6' }}>
-                Transacciones Extraídas ({parsedTransactions.length}) - Puedes editar cualquier campo antes de guardar:
+              <h4 className="preview-list-header">
+                Transacciones Extraídas ({parsedTransactions.length}) - Revisa o edita cualquier campo:
               </h4>
               <div className="results-scroll">
                 {parsedTransactions.map((tx, idx) => (
-                  <div key={idx} className="parsed-item-card-editable">
+                  <div key={idx} className={`parsed-item-card-editable ${importing ? 'disabled-card' : ''}`}>
                     <div className="card-row-top">
                       <div className="input-field-group flex-2">
                         <label className="field-label">Comercio / Concepto:</label>
                         <input
                           type="text"
                           value={tx.concept}
+                          disabled={importing}
                           onChange={(e) => updateTxField(idx, 'concept', e.target.value)}
                           className="editable-input concept-input-field"
-                          placeholder="Comercio..."
                         />
                       </div>
 
                       <div className="input-field-group flex-1">
-                        <label className="field-label">Monto (HNL):</label>
+                        <label className="field-label">Monto ({tx.currency || 'HNL'}):</label>
                         <input
                           type="number"
                           step="0.01"
                           value={tx.amount}
+                          disabled={importing}
                           onChange={(e) => updateTxField(idx, 'amount', parseFloat(e.target.value) || 0)}
                           className="editable-input amount-input-field"
                         />
                       </div>
 
-                      <button onClick={() => removeItem(idx)} className="item-remove-btn" title="Quitar de la lista">
+                      <button
+                        onClick={() => removeItem(idx)}
+                        disabled={importing}
+                        className="item-remove-btn"
+                        title="Quitar esta transacción"
+                      >
                         ✕
                       </button>
                     </div>
@@ -289,32 +381,42 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
                         <label className="field-label">Detalle / Notas (Opcional):</label>
                         <input
                           type="text"
-                          value={tx.detail || ''}
+                          value={tx.detail}
+                          disabled={importing}
                           onChange={(e) => updateTxField(idx, 'detail', e.target.value)}
+                          placeholder="Escribe un detalle opcional..."
                           className="editable-input detail-input-field"
-                          placeholder="Escribe un detalle opcional para esta transacción..."
                         />
                       </div>
                     </div>
 
                     <div className="card-row-bottom">
-                      <div className="input-field-group">
+                      <div className="input-field-group flex-1">
                         <label className="field-label">Categoría:</label>
-                        <input
-                          type="text"
+                        <select
                           value={tx.categoryName}
+                          disabled={importing}
                           onChange={(e) => updateTxField(idx, 'categoryName', e.target.value)}
-                          className="editable-input pill-input"
-                        />
+                          className="editable-select"
+                        >
+                          <option value="Transporte">Transporte</option>
+                          <option value="Servicios">Servicios</option>
+                          <option value="Casa">Casa (Tiendas Dpto)</option>
+                          <option value="Supermercado">Supermercado</option>
+                          <option value="Mascotas">Mascotas</option>
+                          <option value="Bienes">Bienes</option>
+                          <option value="Otros">Otros</option>
+                        </select>
                       </div>
 
-                      <div className="input-field-group">
+                      <div className="input-field-group flex-1">
                         <label className="field-label">Método de Pago:</label>
                         <input
                           type="text"
                           value={tx.paymentMethodName}
+                          disabled={importing}
                           onChange={(e) => updateTxField(idx, 'paymentMethodName', e.target.value)}
-                          className="editable-input pm-input"
+                          className="editable-input"
                         />
                       </div>
 
@@ -322,6 +424,7 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
                         <label className="field-label">Encargado:</label>
                         <select
                           value={tx.personInCharge}
+                          disabled={importing}
                           onChange={(e) => updateTxField(idx, 'personInCharge', e.target.value)}
                           className="editable-select"
                         >
@@ -335,6 +438,7 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
                         <input
                           type="date"
                           value={tx.date}
+                          disabled={importing}
                           onChange={(e) => updateTxField(idx, 'date', e.target.value)}
                           className="editable-input date-input"
                         />
@@ -344,9 +448,17 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
                 ))}
               </div>
 
+              {/* SAVE / IMPORT BUTTON WITH SPINNER */}
               <div className="import-action-bar">
                 <button onClick={handleImportAll} disabled={importing} className="confirm-import-btn">
-                  {importing ? 'Guardando...' : `📥 Guardar ${parsedTransactions.length} Transacciones en la Consola`}
+                  {importing ? (
+                    <>
+                      <span className="btn-spinner"></span>
+                      Guardando e Importando Transacciones...
+                    </>
+                  ) : (
+                    `📥 Guardar ${parsedTransactions.length} Transacciones en la Consola`
+                  )}
                 </button>
               </div>
             </div>

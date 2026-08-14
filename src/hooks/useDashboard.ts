@@ -249,6 +249,17 @@ export const useDashboard = ({ user }: UseDashboardOptions) => {
     }
   };
 
+  const handleDeleteAllExpenses = async () => {
+    try {
+      await api.delete('/expenses/all');
+      setExpenses([]);
+      pm.refetch(); // sync balances
+    } catch (error) {
+      console.error('Failed to delete all expenses:', error);
+      alert('Error al eliminar todas las transacciones.');
+    }
+  };
+
   const handleUpdatePreferences = async (e: React.FormEvent) => {
     e.preventDefault();
     const limitNum = parseFloat(editLimit);
@@ -357,6 +368,7 @@ export const useDashboard = ({ user }: UseDashboardOptions) => {
     newCategoryName, setNewCategoryName,
     isAddingCategory, handleAddCategory,
     handleDeleteExpense,
+    handleDeleteAllExpenses,
     handleUpdateExpense,
     handleDeleteCategory,
     refetchExpenses,

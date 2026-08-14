@@ -157,6 +157,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             paymentMethods={d.paymentMethods}
             onUpdateExpense={d.handleUpdateExpense}
             onDeleteExpense={d.handleDeleteExpense}
+            onDeleteAllExpenses={d.handleDeleteAllExpenses}
             onOpenGmailSync={() => setIsGmailModalOpen(true)}
             userName={user.name ? user.name.split(' ')[0] : 'Boris'}
           />

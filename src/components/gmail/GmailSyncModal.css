@@ -5,7 +5,7 @@
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -15,11 +15,11 @@
 
 .gmail-modal {
   background-color: #1f2937;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
   width: 100%;
-  max-width: 750px;
+  max-width: 720px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -103,14 +103,31 @@
   overflow-y: auto;
 }
 
-.person-select-input {
+/* ── Person Selector (Narrow & Compact) ────────────────────────────────────── */
+.person-group-compact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.person-select-label {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.person-select-input-narrow {
+  max-width: 180px;
   width: 100%;
   background-color: #111827;
   color: #f3f4f6;
   border: 1px solid #374151;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 0.9rem;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  outline: none;
 }
 
 .scan-section,
@@ -121,26 +138,39 @@
 }
 
 .scan-desc {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   color: #9ca3af;
-  line-height: 1.4;
+  line-height: 1.45;
   margin: 0;
 }
 
-.start-scan-btn {
+/* ── Unified Single Button ─────────────────────────────────────────────────── */
+.unified-scan-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background: linear-gradient(135deg, #ea4335, #c5221f);
   color: #ffffff;
   border: none;
-  padding: 10px;
-  border-radius: 8px;
-  font-weight: 600;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 700;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: transform 0.2s;
+  box-shadow: 0 4px 14px rgba(234, 67, 53, 0.35);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.start-scan-btn:hover:not(:disabled) {
+.unified-scan-btn:hover:not(:disabled) {
   transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(234, 67, 53, 0.5);
+}
+
+.unified-scan-btn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
 }
 
 .raw-email-textarea {
@@ -156,23 +186,58 @@
 }
 
 .status-banner {
-  margin-top: 12px;
+  margin-top: 14px;
   padding: 10px 14px;
   background-color: rgba(16, 185, 129, 0.15);
   border: 1px solid rgba(16, 185, 129, 0.3);
   color: #34d399;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 0.88rem;
 }
 
+/* ── Scanning Loading Indicator Box ────────────────────────────────────────── */
+.scanning-loading-box {
+  margin-top: 14px;
+  background: rgba(234, 67, 53, 0.1);
+  border: 1px solid rgba(234, 67, 53, 0.25);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.scanning-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(234, 67, 53, 0.3);
+  border-top-color: #ea4335;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.scanning-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+/* ── Parsed Results List ───────────────────────────────────────────────────── */
 .parsed-results-list {
   margin-top: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding-top: 12px;
 }
 
+.preview-list-header {
+  margin: 10px 0 10px 0;
+  color: #f3f4f6;
+  font-size: 0.92rem;
+}
+
 .results-scroll {
-  max-height: 340px;
+  max-height: 320px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -190,6 +255,13 @@
   flex-direction: column;
   gap: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.parsed-item-card-editable.disabled-card {
+  opacity: 0.6;
+  pointer-events: none;
+  filter: grayscale(20%);
 }
 
 .card-row-top,
@@ -283,6 +355,10 @@
 
 .confirm-import-btn {
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background-color: #107c41;
   color: #ffffff;
   border: none;
@@ -294,6 +370,37 @@
   transition: background-color 0.2s;
 }
 
-.confirm-import-btn:hover {
+.confirm-import-btn:hover:not(:disabled) {
   background-color: #0e6b37;
+}
+
+.confirm-import-btn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.btn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Custom SweetAlert2 Dark Modern Theme ───────────────────────────────────── */
+.modern-swal-dark-popup {
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6) !important;
 }
