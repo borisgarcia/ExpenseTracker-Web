@@ -10,6 +10,8 @@ import { ExpensesTable } from './all-expenses/ExpensesTable';
 import { PreferencesForm } from './settings/PreferencesForm';
 import { CategoryManager } from './settings/CategoryManager';
 import { Accounts } from './accounts/Accounts';
+import { GoogleSheetView } from './sheet/GoogleSheetView';
+import { GmailSyncModal } from './gmail/GmailSyncModal';
 import lempiraLogo from '../assets/lempira_logo.png';
 
 import './Dashboard.css';
@@ -20,7 +22,8 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
-  const [currentTab, setCurrentTab] = useState<'overview' | 'all_expenses' | 'accounts' | 'categories' | 'settings'>('overview');
+  const [currentTab, setCurrentTab] = useState<'sheet' | 'overview' | 'all_expenses' | 'accounts' | 'categories' | 'settings'>('sheet');
+  const [isGmailModalOpen, setIsGmailModalOpen] = useState(false);
   const d = useDashboard({ user });
 
   // Bind formatAmount to the user's preferred currency as default
@@ -49,6 +52,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           <div className="brand-logo">¿Y el pisto?</div>
         </div>
         <div className="header-right">
+          <button
+            onClick={() => setIsGmailModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: 'linear-gradient(135deg, #ea4335, #c5221f)',
+              color: '#ffffff',
+              border: 'none',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(234, 67, 53, 0.3)',
+              marginRight: '12px',
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '6px' }}>
+              <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+            </svg>
+            Revisar Gmail
+          </button>
           <div className="user-profile">
             {user.picture ? (
               <img src={user.picture} alt={user.name} className="user-avatar" />
@@ -68,6 +93,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
       {/* ── Tab Navigation ──────────────────────────────────────────────────── */}
       <div className="tabs-nav">
+        <button className={`tab-btn ${currentTab === 'sheet' ? 'active' : ''}`} onClick={() => setCurrentTab('sheet')}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#107c41" style={{ marginRight: '8px' }}>
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z" />
+            <path d="M7 7h10v2H7zm0 4h10v2H7zm0 4h7v2H7z" fill="#ffffff" />
+          </svg>
+          Hoja Google Sheets
+        </button>
         <button className={`tab-btn ${currentTab === 'overview' ? 'active' : ''}`} onClick={() => setCurrentTab('overview')}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '8px' }}>
             <rect x="3" y="3" width="7" height="9"></rect>
@@ -117,6 +149,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
             <p style={{ color: 'var(--text-secondary)' }}>Loading your finances...</p>
           </div>
+
+        ) : currentTab === 'sheet' ? (
+          <GoogleSheetView
+            expenses={d.expenses}
+            categories={d.categories}
+            paymentMethods={d.paymentMethods}
+            onUpdateExpense={d.handleUpdateExpense}
+            onDeleteExpense={d.handleDeleteExpense}
+            onOpenGmailSync={() => setIsGmailModalOpen(true)}
+            userName={user.name ? user.name.split(' ')[0] : 'Boris'}
+          />
 
         ) : currentTab === 'overview' ? (
           <>
@@ -228,6 +271,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           </div>
         )}
       </main>
+
+      {/* ── Gmail Sync Modal ────────────────────────────────────────────── */}
+      <GmailSyncModal
+        isOpen={isGmailModalOpen}
+        onClose={() => setIsGmailModalOpen(false)}
+        onSuccess={() => d.refetchExpenses()}
+        userName={user.name ? user.name.split(' ')[0] : 'Boris'}
+      />
     </div>
   );
 };

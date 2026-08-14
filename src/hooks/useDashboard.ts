@@ -7,6 +7,10 @@ export interface Expense {
   id: string;
   amount: number;
   description: string;
+  detail?: string | null;
+  personInCharge?: string | null;
+  source?: string | null;
+  emailId?: string | null;
   category: { id: string; name: string };
   date: string;
   paymentMethod?: string;
@@ -214,6 +218,26 @@ export const useDashboard = ({ user }: UseDashboardOptions) => {
     }
   };
 
+  const refetchExpenses = async () => {
+    try {
+      const fetched = await api.get('/expenses');
+      setExpenses(fetched);
+    } catch (err) {
+      console.error('Failed to refetch expenses:', err);
+    }
+  };
+
+  const handleUpdateExpense = async (id: string, updatedFields: Partial<Expense> & { categoryId?: string }) => {
+    try {
+      const updated = await api.patch(`/expenses/${id}`, updatedFields);
+      setExpenses((prev) => prev.map((item) => (item.id === id ? updated : item)));
+      pm.refetch();
+    } catch (error) {
+      console.error('Failed to update expense:', error);
+      alert('Error updating expense.');
+    }
+  };
+
   const handleDeleteExpense = async (id: string) => {
     try {
       await api.delete(`/expenses/${id}`);
@@ -333,7 +357,9 @@ export const useDashboard = ({ user }: UseDashboardOptions) => {
     newCategoryName, setNewCategoryName,
     isAddingCategory, handleAddCategory,
     handleDeleteExpense,
+    handleUpdateExpense,
     handleDeleteCategory,
+    refetchExpenses,
     // Helpers
     formatDate,
   };

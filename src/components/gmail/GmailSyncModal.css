@@ -1,0 +1,246 @@
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 16px;
+}
+
+.gmail-modal {
+  background-color: #1f2937;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  width: 100%;
+  max-width: 650px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeInModal 0.2s ease-out;
+}
+
+@keyframes fadeInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.gmail-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background-color: #111827;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+}
+
+.header-title h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #ffffff;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.modal-close-btn:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.gmail-tabs {
+  display: flex;
+  background-color: #111827;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gmail-tab-btn {
+  flex: 1;
+  padding: 12px;
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.gmail-tab-btn.active {
+  color: #ea4335;
+  border-bottom-color: #ea4335;
+  background-color: rgba(234, 67, 53, 0.05);
+}
+
+.gmail-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.person-select-input {
+  width: 100%;
+  background-color: #111827;
+  color: #f3f4f6;
+  border: 1px solid #374151;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.scan-section,
+.paste-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scan-desc {
+  font-size: 0.9rem;
+  color: #9ca3af;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.start-scan-btn {
+  background: linear-gradient(135deg, #ea4335, #c5221f);
+  color: #ffffff;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.start-scan-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.raw-email-textarea {
+  width: 100%;
+  background-color: #111827;
+  color: #f3f4f6;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 0.88rem;
+  resize: vertical;
+  outline: none;
+}
+
+.status-banner {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background-color: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+  border-radius: 6px;
+  font-size: 0.88rem;
+}
+
+.parsed-results-list {
+  margin-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 12px;
+}
+
+.results-scroll {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.parsed-item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #111827;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.item-concept {
+  font-weight: 600;
+  color: #ffffff;
+  font-size: 0.9rem;
+
+}
+
+.item-meta {
+  display: flex;
+  gap: 10px;
+  font-size: 0.76rem;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+.item-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.item-amount {
+  font-weight: bold;
+  color: #10b981;
+  font-family: monospace;
+}
+
+.item-remove-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.import-action-bar {
+  margin-top: 16px;
+}
+
+.confirm-import-btn {
+  width: 100%;
+  background-color: #107c41;
+  color: #ffffff;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.confirm-import-btn:hover {
+  background-color: #0e6b37;
+}

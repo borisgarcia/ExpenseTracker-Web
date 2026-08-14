@@ -44,7 +44,7 @@ function App() {
   }, [token]);
 
   return (
-    <>
+    <GoogleOAuthProvider clientId={googleClientId}>
       <div className="bg-glow-container">
         <div className="bg-glow-orb-1"></div>
         <div className="bg-glow-orb-2"></div>
@@ -52,11 +52,9 @@ function App() {
       {token && user ? (
         <Dashboard user={user} onLogout={handleLogout} />
       ) : (
-        <GoogleOAuthProvider clientId={googleClientId}>
-          <Login onLoginSuccess={handleLoginSuccess} />
-        </GoogleOAuthProvider>
+        <Login onLoginSuccess={handleLoginSuccess} />
       )}
-    </>
+    </GoogleOAuthProvider>
   );
 }
 
