@@ -279,6 +279,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         onClose={() => setIsGmailModalOpen(false)}
         onSuccess={() => d.refetchExpenses()}
         userName={user.name ? user.name.split(' ')[0] : 'Boris'}
+        categories={d.categories}
       />
     </div>
   );

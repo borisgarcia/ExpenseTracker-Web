@@ -9,6 +9,7 @@ interface GmailSyncModalProps {
   onClose: () => void;
   onSuccess: () => void;
   userName?: string;
+  categories?: any[];
 }
 
 export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
@@ -16,6 +17,7 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
   onClose,
   onSuccess,
   userName = 'Boris',
+  categories = [],
 }) => {
   const [activeTab, setActiveTab] = useState<'scan' | 'paste'>('scan');
   const [personInCharge, setPersonInCharge] = useState<string>(userName);
@@ -399,13 +401,23 @@ export const GmailSyncModal: React.FC<GmailSyncModalProps> = ({
                           onChange={(e) => updateTxField(idx, 'categoryName', e.target.value)}
                           className="editable-select"
                         >
-                          <option value="Transporte">Transporte</option>
-                          <option value="Servicios">Servicios</option>
-                          <option value="Casa">Casa (Tiendas Dpto)</option>
-                          <option value="Supermercado">Supermercado</option>
-                          <option value="Mascotas">Mascotas</option>
-                          <option value="Bienes">Bienes</option>
-                          <option value="Otros">Otros</option>
+                          {categories && categories.length > 0 ? (
+                            categories.map((c: any) => (
+                              <option key={c.id || c.name} value={c.name}>
+                                {c.name}
+                              </option>
+                            ))
+                          ) : (
+                            <>
+                              <option value="Transporte">Transporte</option>
+                              <option value="Servicios">Servicios</option>
+                              <option value="Casa">Casa (Tiendas Dpto)</option>
+                              <option value="Supermercado">Supermercado</option>
+                              <option value="Mascotas">Mascotas</option>
+                              <option value="Bienes">Bienes</option>
+                              <option value="Otros">Otros</option>
+                            </>
+                          )}
                         </select>
                       </div>
 
